@@ -1,0 +1,14 @@
+# Lab solutions, reports and photos are shared privately, never published here
+designs/
+print-examples/
+*.pdf
+*.json
+*.jpg
+*.jpeg
+!docs/*.jpg
+
+# editor / OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
