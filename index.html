@@ -272,7 +272,7 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
     <select id="selEx" aria-label="Load an example circuit">
       <option value="">Examples…</option>
       <option value="xor">XOR from four NANDs</option>
-      <option value="cnt">Binary counter 7493</option>
+      <option value="cnt">Binary counter (2× 7476)</option>
       <option value="empty">Empty bench (photo layout)</option>
     </select>
     <button id="bUndo" title="Undo (Ctrl+Z)">Undo</button>
@@ -300,7 +300,7 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
 
 <section id="settings" class="float" hidden>
   <h2>Settings</h2>
-  <label><input type="checkbox" id="optPost" checked><span>Modules powered through mounting posts<small>Like the real case: pin 14/7 (or the chip's VCC/GND) get +5V and 0V when the board sits in a slot. Turn off to wire power yourself from the rail.</small></span></label>
+  <label><input type="checkbox" id="optPost"><span>Power modules without cables (shortcut)<small>On the real case a module works only once its +5V and 0V pins are cabled to the rail. This shortcut powers every module without power cables. Off by default, like the real case.</small></span></label>
   <label><input type="checkbox" id="optLevels"><span>Show logic levels on wires<small>Wires glow when their net is HIGH. Real dupont cables don't do this.</small></span></label>
   <label><input type="checkbox" id="optTips" checked><span>Logic probe on hover<small>Hovering a pin shows its name and level.</small></span></label>
   <label><input type="checkbox" id="optGates" checked><span>Optimizer may move gates between chips<small>Gives a gate's job to an identical gate (or swaps the inputs of a symmetric gate) when that shortens the cables. Turn off to keep every gate where you or the solver put it; then only modules move and cables are re-laid.</small></span></label>
@@ -446,7 +446,7 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
   <div class="card">
     <h2>Working the UNILOG-2 bench</h2>
     <p style="color:var(--muted);margin-top:-2px">UNILOG-2 simulator by <b style="color:var(--accent)">daamioo</b></p>
-    <p>The case works like the one in the lab. Modules sit in 12 slots and get power through their posts. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
+    <p>The case works like the one in the lab. Modules sit in 12 slots. A module works only once it has power: cable its +5V (VCC) and 0V (GND) pins to the rail. Until then its outputs are dead. <b>Wire power</b> in the inspector does it for you, and the design builder cables power for every module it uses. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
     <h3>Wiring</h3>
     <ul>
       <li>Click a pin, then click another pin to run a cable. Dragging from pin to pin also works.</li>
@@ -458,11 +458,12 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
     <ul>
       <li>Drag a chip from the drawer onto a slot. On an occupied slot it replaces the module there and keeps the cables on matching pins.</li>
       <li>Drag a module that's already in the case to move it. Dropping it on another module swaps the two, and the cables go with them. Drop it outside the case to put it back in the drawer.</li>
-      <li>Click a module to see its pinout. <kbd>R</kbd> turns it 180°.</li>
+      <li>Click a module to see its pinout and whether it is powered. <kbd>R</kbd> turns it 180°.</li>
+      <li>The <b>splitter</b> board (Wiring, in the drawer) has 14 rows of 4 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
     </ul>
     <h3>Panel</h3>
     <ul>
-      <li><b>Rail</b> between the rows: <kbd>0V</kbd>, <kbd>H</kbd> (logic 1 through a pull-up resistor) and <kbd>+5V</kbd>. Wiring +5V straight to 0V trips the supply.</li>
+      <li><b>Rail</b> between the rows: <kbd>0V</kbd>, <kbd>H</kbd> and <kbd>+5V</kbd>, once per column. The UNILOG-2 manual calls the H pins "constant logic levels": they give a logic 1 for inputs that must stay HIGH. In the simulator the three H pins of a column are one point, so they also work as a junction: plug an output in, and the other two H pins carry that output (it overrides the logic 1). Wiring +5V straight to 0V trips the supply.</li>
       <li><b>Switch register</b>: 8 latching buttons, each with Q and Q̄ outputs. Keys <kbd>1</kbd>–<kbd>8</kbd> toggle them too.</li>
       <li><b>Pulse</b>: 3 momentary buttons with ⊓ (HIGH while held) and ⊔ (LOW while held) outputs.</li>
       <li><b>Clock</b>: pick 1 Hz, 1 kHz or 1 MHz. CAL trims the rate (drag it or use the scroll wheel). 1 MHz runs in slow motion so the simulation can keep up.</li>
@@ -598,6 +599,12 @@ const CHIPS = {
     names: {1:'1A',13:'1B',9:'1C',10:'1D',8:'1Y',2:'2A',3:'2B',4:'2C',5:'2D',6:'2Y'},
     build: () => [[8,1,13,9,10],[6,2,3,4,5]].map(([o,a,b,c,d]) => { const out = [0];
       return { outs: [o], ins: [a,b,c,d], fn: r => (out[0] = ((r(a) & r(b)) | (r(c) & r(d))) ? 0 : 1, out) }; }) },
+  // 7450: like the 7451, but gate 1 has expander inputs (X, X̄) for a 7460. Left open they add nothing.
+  '7450': { desc: 'Dual AND-OR-INVERT, one expandable', type: 'aoi', group: 'Gates', pins: 14, vcc: 14, gnd: 7,
+    gates: [G(8,1,13,9,10), G(6,2,3,4,5)],
+    names: {1:'1A',13:'1B',9:'1C',10:'1D',8:'1Y',11:'1X',12:'1~X',2:'2A',3:'2B',4:'2C',5:'2D',6:'2Y'},
+    build: () => [[8,1,13,9,10],[6,2,3,4,5]].map(([o,a,b,c,d]) => { const out = [0];
+      return { outs: [o], ins: [a,b,c,d], fn: r => (out[0] = ((r(a) & r(b)) | (r(c) & r(d))) ? 0 : 1, out) }; }) },
   '7486': gateChip('Quad 2-input XOR', 'xor', QUAD),
 
   '7474': { desc: 'Dual D flip-flop, rising edge', group: 'Flip-flops', pins: 14, vcc: 14, gnd: 7, title: 'DUAL D\nFLIP-FLOP',
@@ -676,16 +683,52 @@ const CHIPS = {
     build: () => [{ outs: [1,2,3,4,5,6,7,9,10,11], fn: r => {
       const n = r(15) | r(14) << 1 | r(13) << 2 | r(12) << 3;
       return [0,1,2,3,4,5,6,7,8,9].map(i => i === n ? 0 : 1); } }] },
+
+  // Splitter board: no chip, just rows of header pins joined on the board, for when one signal has to go to more
+  // places than a pin's two headers allow (e.g. one gate output to four inputs). Needs no power.
+  'SPLIT': { desc: 'Splitter: 14 rows of 4 linked pins', group: 'Wiring', pins: 14, passive: true, rowPins: 4, title: 'SPLITTER',
+    names: {1:'A',2:'B',3:'C',4:'D',5:'E',6:'F',7:'G',8:'H',9:'I',10:'J',11:'K',12:'L',13:'M',14:'N'},
+    build: () => [] },
 };
-const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders'];
+const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders', 'Wiring'];
 const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153']);
+// The modules that really exist in the lab, checked against the photos of the case and of the module box.
+// The other chips stay defined so benches saved with them still load, but the drawer no longer offers them.
+// The splitter board isn't in the photos, but it is in the lab.
+const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', 'SPLIT'];
+// Board versions seen in the photos. Cream boards number the pins like the chip (notch up, pin 1 top left).
+// Gray board with mirrored pin numberss print them mirrored top to bottom: pin 7 (0V) top left, pin 1 bottom left, pin 14 (+5V) bottom right, notch at the bottom.
+const BOARD_VARIANTS = { '7400': ['cream'], '7402': ['cream'], '7404': ['mirrored', 'cream'], '7410': ['mirrored'], '7420': ['cream', 'mirrored'],
+  '7442': ['mirrored'], '7450': ['mirrored'], '7451': ['cream'], '7474': ['cream', 'mirrored'], '7476': ['cream', 'mirrored'], '7483': ['cream'], '7486': ['cream'], 'SPLIT': ['cream'] };
+const defaultVariant = t => (BOARD_VARIANTS[t] || [GRAY_BOARDS.has(t) ? 'gray' : 'cream'])[0];
+const variantOk = (t, v) => !!v && (BOARD_VARIANTS[t] || ['cream', 'gray']).includes(v);
+const VARIANT_NAME = { cream: 'cream board', mirrored: 'gray board (mirrored pin numbers)', gray: 'gray board' };
+// The real 7483 board has no pin numbers: its headers are grouped by function around the chip, with separate +5V and 0V pins.
+CHIPS['7483'].layout = (() => {
+  const L = {};
+  [13, 10, 11, 8, 7, 3, 4, 1, 16].forEach((p, i) => L[p] = { side: -1, z: -5.0 + i * 1.05 });   // C0 A1 B1 A2 B2 A3 B3 A4 B4
+  [9, 6, 2, 15, 14].forEach((p, i) => L[p] = { side: 1, z: -2.6 + i * 1.05 });                    // Σ1 Σ2 Σ3 Σ4 C4
+  L[5] = { side: -1, z: 5.3 }; L[12] = { side: 1, z: 5.3 };                                       // +5V, 0V
+  return L;
+})();
+// splitter rows: A–G down the left, H–N down the right, at the same spacing as a 14-pin board
+CHIPS.SPLIT.layout = (() => { const L = {}; for (let p = 1; p <= 14; p++) { const g = pinLocal(14, p); L[p] = { side: g.side, z: g.z }; } return L; })();
+CHIPS.SPLIT.rowX = [1.95, 2.5, 3.05, 3.6];   // header x positions in a row, distance from the board's centre line
+CHIPS['7483'].names = Object.assign(CHIPS['7483'].names, { 2: 'Σ3', 6: 'Σ2', 9: 'Σ1', 15: 'Σ4' });
+// flip-flops are drawn on the boards as small boxes; terminals listed in the order they are drawn
+CHIPS['7474'].ffs = [{ ins: [[2, 'D'], [3, 'C'], [4, '~S'], [1, '~R']], outs: [[5, 'Q'], [6, '~Q']] },
+                     { ins: [[12, 'D'], [11, 'C'], [10, '~S'], [13, '~R']], outs: [[9, 'Q'], [8, '~Q']] }];
+CHIPS['7476'].ffs = [{ ins: [[4, 'J'], [1, 'C'], [16, 'K'], [2, '~S'], [3, '~R']], outs: [[15, 'Q'], [14, '~Q']] },
+                     { ins: [[9, 'J'], [6, 'C'], [12, 'K'], [7, '~S'], [8, '~R']], outs: [[11, 'Q'], [10, '~Q']] }];
 for (const [k, d] of Object.entries(CHIPS)) {
   d.name = k;
-  d.names[d.vcc] = 'VCC'; d.names[d.gnd] = 'GND';
+  d.legacy = !LAB_SET.includes(k);
+  if (!d.passive) { d.names[d.vcc] = 'VCC'; d.names[d.gnd] = 'GND'; }
   for (let p = 1; p <= d.pins; p++) if (!d.names[p]) d.names[p] = 'NC';
   d.outSet = new Set(d.build().flatMap(u => u.outs));
 }
 function pinRole(def, p) {
+  if (def.passive) return 'jn';
   if (p === def.vcc || p === def.gnd) return 'pwr';
   if (def.outSet.has(p)) return 'out';
   if (def.names[p] === 'NC') return 'nc';
@@ -702,6 +745,14 @@ const D_L = 1, D_H = 2, D_WH = 3;
 function pinLocal(n, p) {
   const half = n / 2, pitch = n === 14 ? 1.5 : 1.3, z0 = -(half - 1) * pitch / 2;
   return p <= half ? { side: -1, z: z0 + (p - 1) * pitch } : { side: 1, z: z0 + (n - p) * pitch };
+}
+// where a pin's header pair sits on a particular board (function-grouped layouts, mirrored mirrored numbering)
+function pinGeo(def, variant, p) {
+  const L = def.layout && def.layout[p];
+  if (L) return { side: L.side, z: L.z };
+  const g = pinLocal(def.pins, p);
+  if (variant === 'mirrored') g.z = -g.z;
+  return g;
 }
 const WIRE_COLORS = [
   ['Red', 0xc8241f], ['Orange', 0xe8701a], ['Yellow', 0xe6c619], ['Green', 0x2c9a3d], ['Blue', 0x2147b8],
@@ -858,12 +909,12 @@ function mkTerm(id, label, role = 'in', pwr = 0) {
   const t = { id, drive: 0, net: null, pwr, label, role };
   T.set(id, t); return t;
 }
-const pinGeo = new THREE.BoxGeometry(0.1, PIN_H, 0.1);
+const pinBoxGeo = new THREE.BoxGeometry(0.1, PIN_H, 0.1);
 const hitGeo = new THREE.BoxGeometry(0.44, 1.4, 0.46);
 // All gold header pins are drawn as ONE instanced mesh (one draw call instead of ~800).
 // Each header keeps an invisible anchor Object3D in the scene graph; its world matrix feeds the instance.
 const PIN_CAP = 1536;
-const pinInst = new THREE.InstancedMesh(pinGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.3 }), PIN_CAP);
+const pinInst = new THREE.InstancedMesh(pinBoxGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.3 }), PIN_CAP);
 pinInst.frustumCulled = false;
 pinInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 const PIN_COL = new THREE.Color(0xdcb45c), PIN_HI = new THREE.Color(0xfff0b0), PIN_OK = new THREE.Color(0x6dff9a);
@@ -1033,7 +1084,7 @@ function panelHeader(x, z, termId, n = 1) {
 // terminals for everything on the panel
 mkTerm('VCC', '+5V rail', 'pwr', 1);
 mkTerm('GND', '0V rail', 'pwr', -1);
-for (let g = 0; g < 6; g++) mkTerm('H' + g, 'H (logic 1 via pull-up)', 'pwr');
+for (let g = 0; g < 6; g++) mkTerm('H' + g, 'H · constant logic 1', 'pwr');
 for (let k = 1; k <= 16; k++) mkTerm('LED' + k, 'Display register · LED ' + k);
 for (let k = 1; k <= 8; k++) { mkTerm(`SW${k}Q`, `Switch register ${k} · Q`, 'out'); mkTerm(`SW${k}N`, `Switch register ${k} · ~Q`, 'out'); }
 mkTerm('CLK', 'Clock output ⊓', 'out'); mkTerm('CLKN', 'Clock output ⊔ (inverted)', 'out');
@@ -1187,6 +1238,19 @@ function gateShape(g, type, cx, cz, w, h, nIn, fx, X, Z, S, fillCol) {
   const qd = (a, b, c, d) => g.quadraticCurveTo(X(fx(a)), Z(b), X(fx(c)), Z(d));
   const bz = (a, b, c, d, e, f) => g.bezierCurveTo(X(fx(a)), Z(b), X(fx(c)), Z(d), X(fx(e)), Z(f));
   const isOr = type === 'or' || type === 'nor' || type === 'xor';
+  if (type === 'aoi') {
+    // AND-OR-INVERT as printed on the 7450/7451 boards: two ANDs feeding a NOR
+    const aw = w * 0.42, ah = (h - 0.14) / 2, r = ah / 2, ys = [y0, y0 + ah + 0.14];
+    g.fillStyle = fillCol;
+    for (const yt of ys) { const xm = x0 + aw - r; g.beginPath(); mv(x0, yt); ln(xm, yt); bz(xm + r * 1.33, yt, xm + r * 1.33, yt + ah, xm, yt + ah); ln(x0, yt + ah); g.closePath(); g.fill(); g.stroke(); }
+    const nx0 = x0 + aw + 0.16, nh = h * 0.62, ny0 = cz - nh / 2, ny1 = cz + nh / 2;
+    g.beginPath(); mv(x0 + aw, ys[0] + ah / 2); ln(nx0 + 0.02, ys[0] + ah / 2); ln(nx0 + 0.06, cz - nh * 0.22); g.stroke();
+    g.beginPath(); mv(x0 + aw, ys[1] + ah / 2); ln(nx0 + 0.02, ys[1] + ah / 2); ln(nx0 + 0.06, cz + nh * 0.22); g.stroke();
+    g.beginPath(); mv(nx0, ny0); qd(nx0 + (xb - nx0) * 0.55, ny0, xb, cz); qd(nx0 + (xb - nx0) * 0.55, ny1, nx0, ny1); qd(nx0 + (xb - nx0) * 0.3, cz, nx0, ny0); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.arc(X(fx(xb + br)), Z(cz), br * S, 0, 7); g.fill(); g.stroke();
+    const ins = [ys[0] + ah / 3, ys[0] + 2 * ah / 3, ys[1] + ah / 3, ys[1] + 2 * ah / 3].map(z => ({ x: x0, z }));
+    return { ins, out: { x: xb + 2 * br, z: cz } };
+  }
   g.beginPath();
   if (type === 'and' || type === 'nand') { const r = h / 2, xm = xb - r; mv(x0, y0); ln(xm, y0); bz(xm + r * 1.33, y0, xm + r * 1.33, y1, xm, y1); ln(x0, y1); g.closePath(); }
   else if (isOr) { mv(x0, y0); qd(x0 + (xb - x0) * 0.55, y0, xb, cz); qd(x0 + (xb - x0) * 0.55, y1, x0, y1); qd(x0 + w * 0.22, cz, x0, y0); g.closePath(); }
@@ -1194,12 +1258,6 @@ function gateShape(g, type, cx, cz, w, h, nIn, fx, X, Z, S, fillCol) {
   else { mv(x0, y0); ln(xb, y0); ln(xb, y1); ln(x0, y1); g.closePath(); }
   g.fillStyle = fillCol; g.fill(); g.stroke();
   if (type === 'xor') { g.beginPath(); mv(x0 - 0.13, y0); qd(x0 + w * 0.22 - 0.13, cz, x0 - 0.13, y1); g.stroke(); }
-  if (type === 'aoi') {
-    g.save(); g.fillStyle = '#222'; g.font = `700 ${0.3 * S}px Arial`; g.textBaseline = 'middle';
-    ctext(g, '&', X(fx(cx - 0.12)), Z(cz - h / 4)); ctext(g, '&', X(fx(cx - 0.12)), Z(cz + h / 4)); ctext(g, '≥1', X(fx(cx + 0.28)), Z(cz));
-    g.restore();
-    g.beginPath(); mv(x0, cz); ln(cx + 0.05, cz); g.stroke();
-  }
   if (inv) { g.beginPath(); g.arc(X(fx(xb + br)), Z(cz), br * S, 0, 7); g.fillStyle = fillCol; g.fill(); g.stroke(); }
   const ins = [];
   for (let k = 0; k < nIn; k++) {
@@ -1209,10 +1267,13 @@ function gateShape(g, type, cx, cz, w, h, nIn, fx, X, Z, S, fillCol) {
   }
   return { ins, out: { x: xb + (inv ? 2 * br : 0), z: cz } };
 }
-function boardTexture(type) {
-  if (boardTexCache[type]) return boardTexCache[type];
+function boardTexture(type, variant) {
+  variant = variant || defaultVariant(type);
+  const key = type + '|' + variant;
+  if (boardTexCache[key]) return boardTexCache[key];
   const def = CHIPS[type], S = 56, W = BOARD_W, D = BOARD_D;
-  const gray = GRAY_BOARDS.has(type), bg = gray ? '#dcdcd5' : '#e6dcab';
+  const gray = variant !== 'cream', mirrored = variant === 'mirrored', bg = gray ? '#dcdcd5' : '#e6dcab';
+  const PZ = p => pinGeo(def, variant, p).z;
   const tex = canvasTex(W * S, D * S, g => {
     const X = u => (u + W / 2) * S, Z = v => (v + D / 2) * S;
     g.fillStyle = bg; g.fillRect(0, 0, W * S, D * S);
@@ -1222,31 +1283,68 @@ function boardTexture(type) {
     noise(g, W * S, D * S, 3500, 0.05);
     if (!gray) { g.strokeStyle = '#5c5a3a'; g.lineWidth = 0.08 * S; g.strokeRect(X(-4.62), Z(-6.42), 9.24 * S, 12.84 * S); }
     const n = def.pins, half = n / 2;
-    const zTop = pinLocal(n, 1).z - 0.85, zBot = pinLocal(n, half).z + 0.85;
     g.strokeStyle = '#1d1d1d'; g.lineWidth = 0.065 * S; g.lineJoin = 'round';
-    // pin pads
-    g.font = `700 ${0.36 * S}px Arial`; g.textBaseline = 'middle'; g.fillStyle = '#1d1d1d';
+    g.textBaseline = 'middle';
+    if (def.passive) {
+      // splitter: each row's pads sit on one copper strip, so every header in a row is the same point
+      for (let p = 1; p <= n; p++) {
+        const { side, z } = pinGeo(def, variant, p), xs = def.rowX;
+        const xa = side * (xs[0] - 0.42), xb = side * (xs[xs.length - 1] + 0.42);
+        g.fillStyle = 'rgba(190,150,60,.55)'; g.fillRect(X(Math.min(xa, xb)), Z(z - 0.2), Math.abs(xb - xa) * S, 0.4 * S);
+        g.lineWidth = 0.045 * S; g.strokeRect(X(Math.min(xa, xb)), Z(z - 0.36), Math.abs(xb - xa) * S, 0.72 * S);
+        g.fillStyle = '#1d1d1d'; g.font = `700 ${0.36 * S}px Arial`; ctext(g, def.names[p], X(side * 1.3), Z(z));
+      }
+      g.save(); g.translate(X(0), Z(0)); g.rotate(-Math.PI / 2);
+      g.font = `700 ${0.46 * S}px Arial`; g.textAlign = 'center'; g.fillStyle = '#1d1d1d'; g.fillText('SPLITTER', 0, 0);
+      g.font = `600 ${0.3 * S}px Arial`; g.fillText('each row is one point', 0, 0.55 * S);
+      g.restore();
+    } else if (def.layout) {
+      // function-grouped board (7483): no pin numbers, each header pair runs to its name on the chip outline
+      const bx0 = -1.55, bx1 = 1.55, bz0 = -4.3, bz1 = 3.6;
+      g.lineWidth = 0.07 * S; g.strokeRect(X(bx0), Z(bz0), (bx1 - bx0) * S, (bz1 - bz0) * S);
+      g.lineWidth = 0.05 * S; g.font = `600 ${0.34 * S}px Arial`; g.fillStyle = '#1d1d1d';
+      for (const side of [-1, 1]) {
+        const ps = Object.keys(def.layout).map(Number).filter(p => def.layout[p].side === side && p !== def.vcc && p !== def.gnd).sort((a, b) => def.layout[a].z - def.layout[b].z);
+        const span = (bz1 - bz0 - 0.6) / Math.max(1, ps.length - 1);
+        ps.forEach((p, i) => {
+          const pz = def.layout[p].z, lz = ps.length === 1 ? (bz0 + bz1) / 2 : bz0 + 0.3 + i * span * (side < 0 ? 1 : 0.55) + (side > 0 ? 1.3 : 0);
+          const xe = side * 2.75, xb = side < 0 ? bx0 : bx1, xc = side * (2.15 - 0.05 * i);
+          g.beginPath(); g.moveTo(X(xe), Z(pz)); g.lineTo(X(xc), Z(pz)); g.lineTo(X(xc), Z(lz)); g.lineTo(X(xb), Z(lz)); g.stroke();
+          ctext(g, def.names[p], X(side < 0 ? bx0 + 0.15 : bx1 - 0.15), Z(lz), side < 0 ? 'left' : 'right');
+        });
+      }
+      g.font = `700 ${0.38 * S}px Arial`;
+      ctext(g, '+5V', X(-2.35), Z(def.layout[def.vcc].z), 'left');
+      ctext(g, '0V', X(2.35), Z(def.layout[def.gnd].z), 'right');
+    } else {
+    const zs = []; for (let p = 1; p <= n; p++) zs.push(PZ(p));
+    const zTop = Math.min(...zs) - 0.85, zBot = Math.max(...zs) + 0.85;
+    // pin pads with their numbers
+    g.font = `700 ${0.36 * S}px Arial`; g.fillStyle = '#1d1d1d';
     for (let p = 1; p <= n; p++) {
-      const { side, z } = pinLocal(n, p);
+      const { side, z } = pinGeo(def, variant, p);
       const xa = side < 0 ? -4.62 : 2.62, xw = 2.0;
       g.lineWidth = 0.05 * S; g.strokeRect(X(xa), Z(z - 0.4), xw * S, 0.8 * S);
       g.fillStyle = gray ? 'rgba(200,170,90,.35)' : 'rgba(190,150,60,.35)';
       g.fillRect(X(side < 0 ? -3.82 : 2.72), Z(z - 0.32), 1.1 * S, 0.64 * S);
       g.fillStyle = '#1d1d1d'; ctext(g, String(p), X(side * 4.2), Z(z));
     }
-    // chip body
+    // chip body; the notch is at pin 1's end (at the bottom on the mirrored mirrored gray boards, drawn dashed like on the real ones)
     g.lineWidth = 0.07 * S;
     g.strokeRect(X(-2.3), Z(zTop), 4.6 * S, (zBot - zTop) * S);
-    g.beginPath(); g.arc(X(0), Z(zTop), 0.42 * S, 0, Math.PI); g.fillStyle = bg; g.fill(); g.stroke();
+    const nz = mirrored ? zBot : zTop;
+    g.beginPath(); g.arc(X(0), Z(nz), 0.42 * S, mirrored ? Math.PI : 0, mirrored ? 2 * Math.PI : Math.PI); g.fillStyle = bg; g.fill();
+    if (mirrored) g.setLineDash([0.12 * S, 0.1 * S]);
+    g.stroke(); g.setLineDash([]);
     g.lineWidth = 0.05 * S;
     if (def.gates) {
-      def.gates.forEach(gt => {
+      def.gates.forEach((gt, gi) => {
         const pins = [...gt.i, gt.o];
         const L = pins.filter(p => p <= half).length;
         const side = L * 2 > pins.length ? -1 : L * 2 < pins.length ? 1 : 0;
         const fx = side > 0 ? (x => -x) : (x => x), near = side > 0 ? 1 : -1;
-        const ins = gt.i.slice().sort((a, b) => pinLocal(n, a).z - pinLocal(n, b).z);
-        const cz = ins.reduce((s, p) => s + pinLocal(n, p).z, 0) / ins.length;
+        const ins = gt.i.slice().sort((a, b) => PZ(a) - PZ(b));
+        const cz = ins.reduce((s, p) => s + PZ(p), 0) / ins.length;
         const nIn = ins.length;
         const w = def.type === 'not' ? 0.85 : def.type === 'aoi' ? 1.35 : 1.1;
         const hh = def.type === 'not' ? 0.75 : def.type === 'aoi' ? 1.4 : 0.8 + 0.15 * Math.max(0, nIn - 2);
@@ -1257,22 +1355,51 @@ function boardTexture(type) {
         const shp = gateShape(tmp, def.type, cx, cz, w, hh, nIn, fx, X, Z, S, bg);
         const poly = pts => { g.beginPath(); pts.forEach(([x, z], i) => (i ? g.lineTo : g.moveTo).call(g, X(fx(x)), Z(z))); g.stroke(); };
         ins.forEach((p, k) => {
-          const pl = pinLocal(n, p), tz = shp.ins[k].z, tx = shp.ins[k].x;
+          const pl = pinGeo(def, variant, p), tz = shp.ins[k].z, tx = shp.ins[k].x;
           const xc = x0 - 0.2 - 0.12 * k - (def.type === 'xor' ? 0.13 : 0);
           if (pl.side === near) poly([[-2.3, pl.z], [xc, pl.z], [xc, tz], [tx, tz]]);
           else { const xr = 2.3 - 0.22 - 0.12 * k, za = cz + hh / 2 + 0.3 + 0.12 * k; poly([[2.3, pl.z], [xr, pl.z], [xr, za], [xc, za], [xc, tz], [tx, tz]]); }
         });
-        const po = pinLocal(n, gt.o), o = shp.out;
+        const po = pinGeo(def, variant, gt.o), o = shp.out;
         if (po.side === near) { const xo = x1 + 0.22; poly([[o.x, o.z], [xo, o.z], [xo, po.z], [-2.3, po.z]]); }
         else { const xo = (x1 + 2.3) / 2; poly([[o.x, o.z], [xo, o.z], [xo, po.z], [2.3, po.z]]); }
         gateShape(g, def.type, cx, cz, w, hh, nIn, fx, X, Z, S, bg);
+        // mirrored gray boards number their gates inside the symbols
+        if (mirrored) { g.save(); g.fillStyle = '#333'; g.font = `600 ${0.3 * S}px Arial`; ctext(g, String(gi + 1), X(fx(cx - (def.type === 'not' ? 0.12 : 0.05))), Z(cz)); g.restore(); }
       });
       g.font = `700 ${0.34 * S}px Arial`; g.fillStyle = '#1d1d1d';
-      for (const p of [def.vcc, def.gnd]) { const { side, z } = pinLocal(n, p); ctext(g, p === def.vcc ? '+5V' : '0V', X(side * 1.55), Z(z)); }
+      for (const p of [def.vcc, def.gnd]) { const { side, z } = pinGeo(def, variant, p); ctext(g, p === def.vcc ? '+5V' : '0V', X(side * 1.55), Z(z)); }
+    } else if (def.ffs) {
+      // flip-flops drawn as small boxes with their terminals, wired to the pins like on the real boards
+      g.font = `600 ${0.3 * S}px Arial`; g.fillStyle = '#1d1d1d';
+      def.ffs.forEach((ff, fi) => {
+        const all = [...ff.ins, ...ff.outs], sides = all.map(([p]) => pinGeo(def, variant, p).side);
+        const mixed = sides.some(s => s < 0) && sides.some(s => s > 0);
+        const bw = mixed ? 1.9 : 1.45, cx = mixed ? 0 : (sides[0] < 0 ? -0.95 : 0.95);
+        const zsF = all.map(([p]) => PZ(p)), cz = zsF.reduce((a, b) => a + b, 0) / zsF.length;
+        // a box in the middle takes pins from both columns; a box on one side has all its terminals facing its pins
+        const byZ = (a, b) => PZ(a[0]) - PZ(b[0]);
+        const bySide = s => all.filter(([p]) => pinGeo(def, variant, p).side === s).sort(byZ);
+        const left = mixed ? bySide(-1) : sides[0] < 0 ? all.slice().sort(byZ) : [];
+        const right = mixed ? bySide(1) : sides[0] > 0 ? all.slice().sort(byZ) : [];
+        const rows = Math.max(left.length, right.length), bh = rows * 0.4 + 0.3;
+        const bz0 = Math.max(zTop + 0.25, Math.min(zBot - 0.25 - bh, cz - bh / 2)), bx0 = cx - bw / 2, bx1 = cx + bw / 2;
+        g.lineWidth = 0.05 * S; g.strokeRect(X(bx0), Z(bz0), bw * S, bh * S);
+        const term = (list, boxSide) => list.forEach(([p, lab], k) => {
+          const pg = pinGeo(def, variant, p), tz = bz0 + 0.3 + k * ((bh - 0.6) / Math.max(1, list.length - 1));
+          const ex = pg.side * 2.3, bx = boxSide < 0 ? bx0 : bx1, xc = (ex + bx) / 2 + pg.side * 0.08 * k;
+          g.beginPath(); g.moveTo(X(ex), Z(pg.z)); g.lineTo(X(xc), Z(pg.z)); g.lineTo(X(xc), Z(tz)); g.lineTo(X(bx), Z(tz)); g.stroke();
+          ctext(g, lab, X(boxSide < 0 ? bx0 + 0.1 : bx1 - 0.1), Z(tz), boxSide < 0 ? 'left' : 'right');
+        });
+        term(left, -1); term(right, 1);
+        g.save(); g.font = `700 ${0.3 * S}px Arial`; ctext(g, String(fi + 1), X(cx), Z(bz0 + bh / 2)); g.restore();
+      });
+      g.font = `700 ${0.34 * S}px Arial`;
+      for (const p of [def.vcc, def.gnd]) { const { side, z } = pinGeo(def, variant, p); ctext(g, p === def.vcc ? '+5V' : '0V', X(side * 1.7), Z(z)); }
     } else {
       g.font = `600 ${0.33 * S}px Arial`; g.fillStyle = '#1d1d1d';
       for (let p = 1; p <= n; p++) {
-        const { side, z } = pinLocal(n, p);
+        const { side, z } = pinGeo(def, variant, p);
         let nm = def.names[p]; if (nm === 'NC') continue;
         if (p === def.vcc) nm = '+5V'; if (p === def.gnd) nm = '0V';
         ctext(g, nm, X(side * 2.12), Z(z), side < 0 ? 'left' : 'right');
@@ -1284,17 +1411,18 @@ function boardTexture(type) {
       lines.forEach((l, i) => g.fillText(l, 0, (i - (lines.length - 1) / 2) * 0.48 * S));
       g.restore();
     }
+    }
     g.fillStyle = '#151515'; g.font = `700 ${0.72 * S}px Arial`; g.textBaseline = 'middle';
-    ctext(g, type, X(3.0), Z(-5.95));
-    if (gray) { g.font = `600 ${0.3 * S}px Arial`; ctext(g, 'UNILOG', X(-3.4), Z(5.95)); }
+    if (!def.passive) ctext(g, type, X(3.0), Z(-5.95));
+    else if (gray) { g.font = `600 ${0.3 * S}px Arial`; ctext(g, 'UNILOG', X(-3.4), Z(5.95)); }
   });
-  boardTexCache[type] = tex; return tex;
+  boardTexCache[key] = tex; return tex;
 }
 const boardSideMat = new THREE.MeshStandardMaterial({ color: 0x8b8a70, roughness: 0.7 });
 const postGeo = new THREE.CylinderGeometry(0.3, 0.34, 0.75, 14);
-function buildModuleMesh(type) {
+function buildModuleMesh(type, variant) {
   const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ map: boardTexture(type), roughness: 0.62, emissive: 0x000000 });
+  const mat = new THREE.MeshStandardMaterial({ map: boardTexture(type, variant), roughness: 0.62, emissive: 0x000000 });
   const board = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W, 0.12, BOARD_D), [boardSideMat, boardSideMat, mat, boardSideMat, boardSideMat, boardSideMat]);
   board.position.y = BOARD_TOP - 0.06; board.castShadow = true; board.receiveShadow = true; group.add(board);
   for (const z of [-5.95, 5.95]) { const p = new THREE.Mesh(postGeo, M.brass); p.position.set(z < 0 ? 0 : 0, BOARD_TOP + 0.37, z); p.castShadow = true; group.add(p); }
@@ -1307,24 +1435,26 @@ function buildModuleMesh(type) {
 let uidSeq = 1, wireSeq = 1;
 const modules = [], wires = [];
 const moduleAt = slot => modules.find(m => m.slot === slot);
-function createModule(type, slot, rot = 0) {
+function createModule(type, slot, rot = 0, variant) {
   const def = CHIPS[type]; if (!def) return null;
   const uid = uidSeq++;
-  const mm = buildModuleMesh(type);
-  const m = { uid, type, def, slot, rot, group: mm.group, board: mm.board, mat: mm.mat, headers: [], pt: {}, units: [], powered: false };
+  variant = variantOk(type, variant) ? variant : defaultVariant(type);
+  const mm = buildModuleMesh(type, variant);
+  const m = { uid, type, def, slot, rot, variant, group: mm.group, board: mm.board, mat: mm.mat, headers: [], pt: {}, units: [], powered: false };
   mm.group.position.set(SLOT_X(slot), 0, SLOT_Z(slot)); mm.group.rotation.y = rot ? Math.PI : 0;
   scene.add(mm.group);
   for (let p = 1; p <= def.pins; p++) {
     const role = pinRole(def, p);
     const t = mkTerm(`m${uid}.${p}`, '', role); m.pt[p] = t;
-    const { side, z } = pinLocal(def.pins, p);
-    for (let j = 0; j < 2; j++) m.headers.push(addHeader(mm.group, side * (j ? 3.55 : 3.0), BOARD_TOP, z, `m${uid}.${p}.${j}`, t, { mod: m, pinNo: p }));
+    const { side, z } = pinGeo(def, variant, p);
+    const xs = def.rowX || [3.0, 3.55];   // two headers per chip pin; a splitter row has more
+    xs.forEach((x, j) => m.headers.push(addHeader(mm.group, side * x, BOARD_TOP, z, `m${uid}.${p}.${j}`, t, { mod: m, pinNo: p })));
   }
   addPick(mm.board, { kind: 'module', m });
   m.read = p => m.pt[p].net.v;
   // units that don't list their inputs (flip-flops, counters, MSI chips) listen to every non-output pin
   const allIn = [];
-  for (let p = 1; p <= def.pins; p++) if (p !== def.vcc && p !== def.gnd && !def.outSet.has(p)) allIn.push(p);
+  if (!def.passive) for (let p = 1; p <= def.pins; p++) if (p !== def.vcc && p !== def.gnd && !def.outSet.has(p)) allIn.push(p);
   m.units = def.build().map(u => ({ fn: u.fn, st: u.st || {}, rand: u.rand, m, q: false, ins: u.ins || allIn, outT: u.outs.map(p => m.pt[p]) }));
   modules.push(m);
   invalidate(true);
@@ -1395,7 +1525,7 @@ function updateWiresFor(m) { for (const w of wires) if (wireTouches(w, m)) updat
 /* ================================================================
    LOGIC ENGINE
    ================================================================ */
-const S = { mains: true, sw: [0,0,0,0,0,0,0,0], pulse: [0,0,0], range: 0, cal: 0.5, clk: 0, autoPower: true, levels: false, tips: true, optRot: true, optGates: true };
+const S = { mains: true, sw: [0,0,0,0,0,0,0,0], pulse: [0,0,0], range: 0, cal: 0.5, clk: 0, autoPower: false, levels: false, tips: true, optRot: true, optGates: true };
 let psuFault = false, powerOn = true, unitList = [], oscillating = false;
 const FREQS = [1, 1000, 1e6];
 const calFactor = () => Math.pow(2, (S.cal - 0.5) * 2);
@@ -1415,7 +1545,7 @@ function computeNet(n) {
 const computeAll = () => { for (const n of nets) computeNet(n); };
 
 function rebuild() {
-  for (const m of modules) { m.pt[m.def.vcc].pwr = S.autoPower ? 1 : 0; m.pt[m.def.gnd].pwr = S.autoPower ? -1 : 0; }
+  for (const m of modules) if (!m.def.passive) { m.pt[m.def.vcc].pwr = S.autoPower ? 1 : 0; m.pt[m.def.gnd].pwr = S.autoPower ? -1 : 0; }
   const par = new Map(); for (const id of T.keys()) par.set(id, id);
   const find = id => { let r = id; while (par.get(r) !== r) r = par.get(r); let c = id; while (par.get(c) !== r) { const nx = par.get(c); par.set(c, r); c = nx; } return r; };
   for (const w of wires) { const a = find(H.get(w.a).term.id), b = find(H.get(w.b).term.id); if (a !== b) par.set(a, b); }
@@ -1450,12 +1580,12 @@ function applyDrives() {
   for (let k = 0; k < 8; k++) { T.get(`SW${k + 1}Q`).drive = lv(S.sw[k]); T.get(`SW${k + 1}N`).drive = lv(!S.sw[k]); }
   T.get('CLK').drive = lv(S.clk); T.get('CLKN').drive = lv(!S.clk);
   for (let k = 0; k < 3; k++) { T.get('P' + (k + 1)).drive = lv(S.pulse[k]); T.get(`P${k + 1}N`).drive = lv(!S.pulse[k]); }
-  for (const m of modules) { m.pt[m.def.vcc].drive = S.autoPower && on ? D_H : 0; m.pt[m.def.gnd].drive = S.autoPower && on ? D_L : 0; }
+  for (const m of modules) if (!m.def.passive) { m.pt[m.def.vcc].drive = S.autoPower && on ? D_H : 0; m.pt[m.def.gnd].drive = S.autoPower && on ? D_L : 0; }
 }
 function updateChipPower() {
   for (const m of modules) {
     let p = powerOn;
-    if (p && !S.autoPower) { const vn = m.pt[m.def.vcc].net, gn = m.pt[m.def.gnd].net; p = vn.s === 'H' && vn.sh > 0 && gn.s === 'L'; }
+    if (p && !S.autoPower && !m.def.passive) { const vn = m.pt[m.def.vcc].net, gn = m.pt[m.def.gnd].net; p = vn.s === 'H' && vn.sh > 0 && gn.s === 'L'; }
     if (p && !m.powered && powerOn) for (const u of m.units) if (u.rand) u.rand(u.st);
     if (!p) for (const u of m.units) for (const t of u.outT) t.drive = 0;
     m.powered = p;
@@ -1616,15 +1746,28 @@ function serToHid(id) {
   if (!m) return id;
   const mod = moduleAt(+m[1]); return mod ? `m${mod.uid}.${m[2]}.${m[3]}` : null;
 }
+// File versions: 1 = original format. 2 = adds each module's board version ("cream" / "mirrored" / "gray").
+// Version 1 files still load: their modules get the default board for their chip, and the cables stay on the same pin numbers.
+// 3 = modules have to be wired to power, like on the real case (each board's +5V and 0V cabled to the rail), and adds the
+// splitter board. Versions 1 and 2 powered every module without cables, so when one of those loads, power cables are
+// laid for every module that is in use, and the bench works the same as before.
+const FILE_VERSION = 3;
 function serialize() {
-  return { v: 1, modules: modules.map(m => ({ slot: m.slot, type: m.type, rot: m.rot })),
+  return { v: FILE_VERSION, modules: modules.map(m => ({ slot: m.slot, type: m.type, rot: m.rot, variant: m.variant })),
     wires: wires.map(w => [hidToSer(w.a), hidToSer(w.b), w.color]),
     sw: S.sw.slice(), range: S.range, cal: S.cal, mains: S.mains, autoPower: S.autoPower };
 }
 function clearAll() { for (const w of wires.slice()) removeWire(w); for (const m of modules.slice()) destroyModule(m); }
+// returns what the caller may want to tell the user: chips outside the lab set, unknown chips, a newer file version
 function deserialize(d) {
   clearAll();
-  for (const m of d.modules || []) if (CHIPS[m.type] && m.slot >= 0 && m.slot < 12 && !moduleAt(m.slot)) createModule(m.type, m.slot, m.rot ? 1 : 0);
+  const info = { legacy: [], unknown: [], newer: (d.v || 1) > FILE_VERSION };
+  for (const m of d.modules || []) {
+    if (!CHIPS[m.type]) { info.unknown.push(m.type); continue; }
+    if (!(m.slot >= 0 && m.slot < 12) || moduleAt(m.slot)) continue;
+    if (CHIPS[m.type].legacy) info.legacy.push(m.type);
+    createModule(m.type, m.slot, m.rot ? 1 : 0, m.variant);   // v1 has no variant: createModule picks the default board
+  }
   let ci = 0;
   for (const w of d.wires || []) {
     const a = serToHid(w[0]), b = serToHid(w[1]);
@@ -1634,8 +1777,73 @@ function deserialize(d) {
   if (d.range != null) S.range = Math.max(0, Math.min(2, d.range | 0));
   if (d.cal != null) S.cal = Math.max(0, Math.min(1, +d.cal));
   if (d.mains != null) S.mains = !!d.mains;
-  if (d.autoPower != null) { S.autoPower = !!d.autoPower; $('#optPost').checked = S.autoPower; }
+  const old = (d.v || 1) < 3;
+  S.autoPower = old ? false : !!d.autoPower; $('#optPost').checked = S.autoPower;
+  rebuild();
+  if (old && d.autoPower !== false) info.powered = wirePower(modules.filter(m => wires.some(w => wireTouches(w, m))));
   syncPanelVisuals(); resetClock(); rebuild(); select(null);
+  return info;
+}
+// Cables each module's +5V and 0V pin to the rail. A pin takes the nearest free rail header; when another module's
+// power pin is nearer (or the rail is full) it is chained from that module's second header, as people do in the lab.
+// Returns how many modules got new power cables.
+function wirePower(mods, opts = {}) {
+  rebuild();
+  const byTerm = headersByTerm(), done = new Set(); let failed = 0;
+  for (const [kind, pinOf, color] of [['VCC', m => m.def.vcc, 0xc8241f], ['GND', m => m.def.gnd, 0x1d1d1d]]) {
+    const railT = T.get(kind), net = railT.net, on = m => !m.def.passive && m.pt[pinOf(m)].net === net;
+    const todo = mods.filter(m => !m.def.passive && !on(m)).map(m => m.pt[pinOf(m)]);
+    const r = railTree(todo, byTerm.get(railT), color, byTerm, modules.filter(on).map(m => m.pt[pinOf(m)]));
+    failed += r.failed; r.done.forEach(t => done.add(modules.find(m => m.pt[pinOf(m)] === t)));
+  }
+  rebuild();
+  if (failed && !opts.quiet) toast(`${failed} power connection${failed === 1 ? '' : 's'} could not be made: no free header left.`, true);
+  return done.size;
+}
+const headersByTerm = () => { const mp = new Map(); for (const h of H.values()) { if (!mp.has(h.term)) mp.set(h.term, []); mp.get(h.term).push(h); } return mp; };
+const _hp1 = new THREE.Vector3(), _hp2 = new THREE.Vector3();
+const hdrDist = (a, b) => { headerTop(a, _hp1); headerTop(b, _hp2); return Math.hypot(_hp1.x - _hp2.x, _hp1.z - _hp2.z); };
+// Joins each terminal to a rail: straight to the nearest free rail header, or chained from the spare header of a
+// terminal already joined when that is clearly shorter (or the rail is full). Terminals are terms; byTerm maps term -> headers.
+function railTree(todo, railHs, color, byTerm, linked = []) {
+  todo = todo.slice(); linked = linked.slice();
+  const done = []; let failed = 0;
+  while (todo.length) {
+    let best = null;
+    const srcs = [...railHs.filter(h => !h.wire).map(h => [h, 0]), ...linked.flatMap(t => byTerm.get(t).filter(h => !h.wire).map(h => [h, 2]))];
+    for (const t of todo) for (const h of byTerm.get(t)) {
+      if (h.wire) continue;
+      for (const [sh, pen] of srcs) { const d = hdrDist(sh, h) + pen; if (!best || d < best.d) best = { d, t, h, sh }; }
+    }
+    if (!best) { failed += todo.length; break; }
+    addWire(best.sh.id, best.h.id, color);
+    todo.splice(todo.indexOf(best.t), 1); linked.push(best.t); done.push(best.t);
+  }
+  return { done, failed };
+}
+// Lays one signal as a tree, for nets that a single chain can't carry: a splitter row (4 headers) or the H rail can
+// feed several single-header ends (LEDs, display inputs). Busiest terminals are joined first, single-header ones last,
+// each to the nearest terminal already in the tree that still has a free header. Returns the number of failed joins.
+function layTree(terms, root, byTerm, color) {
+  const cap = t => byTerm.get(t).filter(h => !h.wire).length;
+  const inTree = [root], rest = terms.filter(t => t !== root);
+  rest.sort((a, b) => Math.min(3, cap(b)) - Math.min(3, cap(a)));
+  let failed = 0;
+  while (rest.length) {
+    const tier = Math.min(3, cap(rest[0]));
+    let best = null;
+    for (const t of rest) {
+      if (Math.min(3, cap(t)) !== tier) continue;
+      for (const h of byTerm.get(t)) if (!h.wire) for (const p of inTree) for (const ph of byTerm.get(p)) {
+        if (ph.wire) continue;
+        const d = hdrDist(h, ph); if (!best || d < best.d) best = { d, t, h, ph };
+      }
+    }
+    if (!best) { failed += rest.filter(t => Math.min(3, cap(t)) === tier).length; rest.splice(0, rest.length, ...rest.filter(t => Math.min(3, cap(t)) !== tier)); continue; }
+    addWire(best.ph.id, best.h.id, color);
+    rest.splice(rest.indexOf(best.t), 1); inTree.push(best.t);
+  }
+  return failed;
 }
 const undoStack = [];
 function pushUndo() { undoStack.push(JSON.stringify(serialize())); if (undoStack.length > 80) undoStack.shift(); }
@@ -1648,9 +1856,10 @@ function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { try { localStorage.setItem('unilog2.bench.v1', JSON.stringify(serialize())); } catch (e) {} }, 300);
 }
+// the case as in the lab photos: gray mirrored 7404 and two gray mirrored 7420s, the rest cream
 const PHOTO = [
-  { slot: 0, type: '7404' }, { slot: 1, type: '7402' }, { slot: 2, type: '7400' }, { slot: 4, type: '7420', rot: 1 }, { slot: 5, type: '7451' },
-  { slot: 6, type: '7400' }, { slot: 7, type: '7400' }, { slot: 8, type: '7420', rot: 1 }, { slot: 9, type: '7420', rot: 1 }, { slot: 10, type: '7420' }, { slot: 11, type: '7486' },
+  { slot: 0, type: '7404', variant: 'mirrored' }, { slot: 1, type: '7402' }, { slot: 2, type: '7400' }, { slot: 4, type: '7420', rot: 1, variant: 'mirrored' }, { slot: 5, type: '7451' },
+  { slot: 6, type: '7400' }, { slot: 7, type: '7400' }, { slot: 8, type: '7420', rot: 1 }, { slot: 9, type: '7420', rot: 1 }, { slot: 10, type: '7420', variant: 'mirrored' }, { slot: 11, type: '7486' },
 ];
 const EXAMPLES = {
   empty: { modules: PHOTO, wires: [] },
@@ -1658,15 +1867,17 @@ const EXAMPLES = {
     ['SW1Q.0','S6.1.0', 0xe6c619], ['S6.1.1','S6.4.0', 0xe6c619], ['SW2Q.0','S6.2.0', 0x2147b8], ['S6.2.1','S6.10.0', 0x2147b8],
     ['S6.3.0','S6.5.0', 0x2c9a3d], ['S6.3.1','S6.9.0', 0x2c9a3d], ['S6.6.0','S6.12.0', 0x7a3fb5], ['S6.8.0','S6.13.0', 0xe8701a],
     ['S6.11.0','LED1.0', 0xc8241f], ['S6.4.1','LED9.0', 0xe6e6e6], ['S6.10.1','LED10.0', 0x8a8a8a] ] },
-  cnt: { modules: PHOTO.map(m => m.slot === 6 ? { slot: 6, type: '7493' } : m), range: 0, wires: [
-    ['CLK.0','S6.14.0', 0xe6c619], ['CLK.1','SCA.0', 0xe6c619], ['S6.12.0','S6.1.0', 0x2c9a3d],
-    ['S6.11.0','LED1.0', 0xc8241f], ['S6.8.0','LED2.0', 0xe8701a], ['S6.9.0','LED3.0', 0x7a3fb5], ['S6.12.1','LED4.0', 0x2147b8],
-    ['S6.1.1','BCD0.0', 0x2147b8], ['S6.9.1','BCD1.0', 0x7a3fb5], ['S6.8.1','BCD2.0', 0xe8701a], ['S6.11.1','BCD3.0', 0xc8241f],
-    ['S6.2.0','R0.GND.0', 0x1d1d1d], ['S6.3.0','R0.GND.1', 0x1d1d1d] ] },
+  // 4-bit ripple counter from two 7476s (J and K left open = 1, so every flip-flop toggles on the falling edge)
+  cnt: { modules: PHOTO.map(m => m.slot === 6 || m.slot === 7 ? { slot: m.slot, type: '7476' } : m), range: 0, wires: [
+    ['CLK.0','S6.1.0', 0xe6c619], ['CLK.1','SCA.0', 0xe6c619],
+    ['S6.15.0','S6.6.0', 0x2147b8], ['S6.15.1','LED4.0', 0x2147b8], ['S6.6.1','BCD0.0', 0x2147b8],
+    ['S6.11.0','S7.1.0', 0x7a3fb5], ['S6.11.1','LED3.0', 0x7a3fb5], ['S7.1.1','BCD1.0', 0x7a3fb5],
+    ['S7.15.0','S7.6.0', 0xe8701a], ['S7.15.1','LED2.0', 0xe8701a], ['S7.6.1','BCD2.0', 0xe8701a],
+    ['S7.11.0','LED1.0', 0xc8241f], ['S7.11.1','BCD3.0', 0xc8241f] ] },
 };
 const EX_NOTES = {
   xor: 'Example: XOR built from the four NANDs of a 7400. Switches 1 and 2 are the inputs, LED 1 is A⊕B.',
-  cnt: 'Example: 7493 counting the 1 Hz clock. LEDs 1–4 show QD…QA and the display shows the count in hex.',
+  cnt: 'Example: two 7476s as a 4-bit ripple counter on the 1 Hz clock. LEDs 1–4 show the count (LED 1 = most significant bit), and so does the display.',
   empty: 'Modules placed as in the lab photo. No wires.',
 };
 
@@ -1683,11 +1894,14 @@ const pinHTML = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/~(.
 function buildLibrary() {
   const lib = $('#lib');
   for (const grp of GROUPS) {
+    const chips = Object.entries(CHIPS).filter(([, d]) => d.group === grp && !d.legacy);   // only modules that exist in the lab
+    if (!chips.length) continue;
     const g = document.createElement('div'); g.className = 'grp';
     g.innerHTML = `<h3>${grp}</h3>`;
-    for (const [k, d] of Object.entries(CHIPS)) if (d.group === grp) {
+    for (const [k, d] of chips) {
       const b = document.createElement('div'); b.className = 'chip'; b.tabIndex = 0; b.setAttribute('role', 'button');
-      b.innerHTML = `<span class="n">${k}</span><span class="d">${d.desc}</span><span class="p">${d.pins}-pin DIP</span>`;
+      const vs = BOARD_VARIANTS[k] || [];
+      b.innerHTML = `<span class="n">${k}</span><span class="d">${d.desc}</span><span class="p">${d.pins}-pin · ${vs.map(v => v === 'mirrored' ? 'gray' : v).join(' / ')}</span>`;
       b.addEventListener('pointerdown', e => startPlacing(k, e));
       b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dropInFirstFree(k); } });
       g.appendChild(b);
@@ -1729,11 +1943,20 @@ function select(s) {
       const l = i, r = n + 1 - i, cl = p => pinRole(d, p);
       rows += `<div class="${cl(l)}"><b>${l}</b>${pinHTML(d.names[l])}</div><div class="r ${cl(r)}"><b>${r}</b>${pinHTML(d.names[r])}</div>`;
     }
-    info.innerHTML = `<h2>${s.m.type}</h2><p class="sub">${d.desc} · slot ${s.m.slot + 1} (${s.m.slot < 6 ? 'back' : 'front'} row)${s.m.rot ? ' · turned 180°' : ''}</p>
+    const vs = BOARD_VARIANTS[s.m.type] || [];
+    const where = d.passive ? 'Every row is one point: the four headers of a row are joined on the board. Use it to send one signal to more places than the two headers of a chip pin allow. It needs no power.'
+      : d.layout ? 'This board has no pin numbers: its headers are labelled by function.'
+      : s.m.variant === 'mirrored' ? 'Gray board with mirrored pin numbers: pins are numbered mirrored, with pin 1 at the bottom left and the notch at the bottom.'
+      : `Pin 1 sits by the notch${s.m.rot ? ', which is now facing you' : ''}.`;
+    info.innerHTML = `<h2>${s.m.type}</h2><p class="sub">${d.desc} · ${VARIANT_NAME[s.m.variant] || 'board'} · slot ${s.m.slot + 1} (${s.m.slot < 6 ? 'back' : 'front'} row)${s.m.rot ? ' · turned 180°' : ''}</p>
+      ${d.legacy ? '<p class="sub" style="color:#ffd27a">This chip is not in the lab set (it doesn\'t appear in the photos of the case or the module box). It is kept so older benches still load.</p>' : ''}
       <div class="dip">${rows}</div>
-      <p class="sub" style="margin-top:10px">Outputs in red. Pin 1 sits by the notch${s.m.rot ? ', which is now facing you' : ''}.</p>
-      <div class="row"><button id="iRot">Turn 180° (R)</button><button id="iDel">Return to drawer</button><button id="iClose">Close</button></div>`;
+      <p class="sub" style="margin-top:10px">${d.passive ? '' : 'Outputs in red. '}${where}</p>
+      ${d.passive ? '' : `<p class="sub">Power: ${S.autoPower ? 'shortcut on, powered without cables' : s.m.powered ? '<b style="color:#8be28b">wired, powered</b>' : `<b style="color:#ff9b8a">not powered</b>, cable pin ${d.vcc} (+5V) and pin ${d.gnd} (0V) to the rail`}</p>`}
+      <div class="row">${d.passive || S.autoPower || s.m.powered ? '' : '<button id="iPwr">Wire power</button>'}<button id="iRot">Turn 180° (R)</button>${vs.length > 1 ? `<button id="iVar">Use the ${s.m.variant === 'mirrored' ? 'cream' : 'gray mirrored'} board</button>` : ''}<button id="iDel">Return to drawer</button><button id="iClose">Close</button></div>`;
     $('#iRot').onclick = () => rotateModule(s.m);
+    if ($('#iPwr')) $('#iPwr').onclick = () => { pushUndo(); wirePower([s.m]); save(); select(s); toast(`${s.m.type}: +5V and 0V cabled to the rail.`); };
+    if ($('#iVar')) $('#iVar').onclick = () => setBoardVariant(s.m, s.m.variant === 'mirrored' ? 'cream' : 'mirrored');
     $('#iDel').onclick = () => { pushUndo(); const t = s.m.type; destroyModule(s.m); rebuild(); save(); toast(`${t} is back in the drawer.`); };
     $('#iClose').onclick = () => select(null);
   } else if (s.w) {
@@ -1748,7 +1971,7 @@ function select(s) {
   info.hidden = false;
 }
 function headerName(h) {
-  if (h.mod) return `${h.mod.type} pin ${h.pinNo} (${pinHTML(h.mod.def.names[h.pinNo])})`;
+  if (h.mod) return h.mod.def.layout ? `${h.mod.type} ${pinHTML(h.mod.def.names[h.pinNo])}` : `${h.mod.type} pin ${h.pinNo} (${pinHTML(h.mod.def.names[h.pinNo])})`;
   return pinHTML(h.term.label);
 }
 function stateText(n) {
@@ -1776,8 +1999,9 @@ function headerTip(h) {
   let title, sub = '';
   if (h.mod) {
     const d = h.mod.def, role = pinRole(d, h.pinNo);
-    title = `${h.mod.type} · pin ${h.pinNo} · ${pinHTML(d.names[h.pinNo])}`;
-    sub = { in: 'input', out: 'output', pwr: S.autoPower ? 'power (fed by the mounting posts)' : 'power, wire it to the rail', nc: 'not connected inside the chip' }[role];
+    title = d.layout ? `${h.mod.type} · ${pinHTML(d.names[h.pinNo])}` : `${h.mod.type} · pin ${h.pinNo} · ${pinHTML(d.names[h.pinNo])}`;
+    sub = { in: 'input', out: 'output', pwr: S.autoPower ? 'power (shortcut: powered without a cable)' : 'power: cable it to the rail', nc: 'not connected inside the chip', jn: 'splitter row: all 4 pins are joined' }[role];
+    if (role !== 'jn' && !h.mod.powered && powerOn) sub += ' · module NOT powered';
   } else { title = pinHTML(h.term.label); sub = { out: 'source', pwr: 'supply rail', in: 'input' }[h.term.role] || ''; }
   const extra = h.wire ? 'Drag the cable end to move it' : wiring ? 'Click to plug the cable here' : 'Click to start a cable';
   return `<div class="t">${title}</div><div class="k">${sub}</div><div class="s"><span class="lamp" style="background:${lc};box-shadow:0 0 6px ${lc}"></span>${lt}</div><div class="k">${extra}</div>`;
@@ -1911,24 +2135,35 @@ function startPlacing(type, e) {
   };
   window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
 }
+// replace a module in its slot (another chip, or the same chip on the other board version), keeping cables on the same pin numbers
+function swapModule(old, type, variant) {
+  const keep = wires.filter(w => wireTouches(w, old)).map(w => [w.a, w.b, w.color]);
+  const { rot, slot } = old;
+  destroyModule(old);
+  const m = createModule(type, slot, rot, variant);
+  const remap = id => {
+    const mt = /^m(\d+)\.(\d+)\.(\d+)$/.exec(id);
+    if (!mt || +mt[1] !== old.uid) return id;
+    return +mt[2] <= m.def.pins ? `m${m.uid}.${mt[2]}.${mt[3]}` : null;
+  };
+  let lost = 0;
+  for (const [a, b, c] of keep) { const A = remap(a), B = remap(b); if (A && B) addWire(A, B, c); else lost++; }
+  return { m, lost };
+}
 function putModule(type, slot) {
   pushUndo();
   const old = moduleAt(slot);
   if (old) {
-    const keep = wires.filter(w => wireTouches(w, old)).map(w => [w.a, w.b, w.color]);
-    const rot = old.rot;
-    destroyModule(old);
-    const m = createModule(type, slot, rot);
-    const remap = id => {
-      const mt = /^m(\d+)\.(\d+)\.(\d+)$/.exec(id);
-      if (!mt || +mt[1] !== old.uid) return id;
-      return +mt[2] <= m.def.pins ? `m${m.uid}.${mt[2]}.${mt[3]}` : null;
-    };
-    let lost = 0;
-    for (const [a, b, c] of keep) { const A = remap(a), B = remap(b); if (A && B) addWire(A, B, c); else lost++; }
+    const { lost } = swapModule(old, type);
     toast(`${old.type} swapped for ${type}. Cables stayed on the same pin numbers${lost ? `, ${lost} had no matching pin and were unplugged` : ''}.`);
   } else createModule(type, slot, 0);
   rebuild(); save();
+}
+function setBoardVariant(m, variant) {
+  pushUndo();
+  const { m: nm } = swapModule(m, m.type, variant);
+  rebuild(); save(); select({ m: nm });
+  toast(`${nm.type} is now on a ${VARIANT_NAME[variant]}. The cables stay on the same pin numbers, which sit in different places on this board.`);
 }
 function dropInFirstFree(type) {
   if (!CASE.open) { toast('Open the case first: press one of the latches on the front.'); return; }
@@ -2127,7 +2362,7 @@ function toggleScope(force) {
 $('#bScope').onclick = () => toggleScope();
 $('#scClose').onclick = () => toggleScope(false);
 $('#bSet').onclick = () => { const s = $('#settings'); s.hidden = !s.hidden; $('#bSet').setAttribute('aria-pressed', String(!s.hidden)); if (!s.hidden) $('#info').hidden = true; };
-$('#optPost').onchange = e => { S.autoPower = e.target.checked; rebuild(); save(); toast(S.autoPower ? 'Modules now get +5V and 0V through their mounting posts.' : 'Modules are unpowered until you wire VCC to +5V and GND to 0V on the rail.'); };
+$('#optPost').onchange = e => { S.autoPower = e.target.checked; rebuild(); save(); toast(S.autoPower ? 'Shortcut on: every module is powered without power cables.' : 'Modules are unpowered until their +5V and 0V pins are cabled to the rail. "Wire power" in the inspector does it for you.'); };
 $('#optLevels').onchange = e => { S.levels = e.target.checked; for (const w of wires) w.glow = ''; };
 $('#optTips').onchange = e => { S.tips = e.target.checked; };
 $('#optRot').onchange = e => { S.optRot = e.target.checked; };
@@ -2177,7 +2412,12 @@ $('#bDl').onclick = () => {
 function loadText(txt) {
   try {
     const d = JSON.parse(txt); if (!d || !Array.isArray(d.modules)) throw 0;
-    pushUndo(); deserialize(d); save();
+    pushUndo(); const info = deserialize(d); save();
+    const uniq = a => [...new Set(a)].join(', ');
+    if (info.legacy.length) setTimeout(() => toast(`This bench uses ${uniq(info.legacy)}, which ${info.legacy.length > 1 ? 'are' : 'is'} not in the lab set (not in the photos of the case or the module box). It still works here, but you won't find it in the lab.`, true), 400);
+    if (info.unknown.length) setTimeout(() => toast(`Skipped chips this version doesn't know: ${uniq(info.unknown)}.`, true), 800);
+    if (info.powered) setTimeout(() => toast(`Older file: modules now need power cables, so ${info.powered} module${info.powered === 1 ? ' was' : 's were'} wired to +5V and 0V.`), 200);
+    if (info.newer) setTimeout(() => toast(`This file was saved by a newer version of the simulator (format ${d.v}). Most of it loaded, but some details may be missing.`, true), 1200);
     if (d.design) {
       dzLoad(d.design);
       // a saved build mapping lets the design show live levels straight away (module terms are stored by slot)
@@ -2197,7 +2437,7 @@ function loadText(txt) {
     benchTitle = d.title || '';
     toast(d.title ? `Loaded ${d.title}.${d.design ? ' Its gate design is open in the Design tab.' : ''}` : 'Bench loaded.');
   }
-  catch (_) { toast('That text is not a saved bench. Paste the whole block that starts with {"v":1.', true); }
+  catch (_) { toast('That text is not a saved bench. Paste the whole block that starts with {"v":.', true); }
 }
 $('#bLoad').onclick = () => loadText($('#saveTxt').value);
 $('#fileIn').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => loadText(String(r.result)); r.readAsText(f); e.target.value = ''; };
@@ -2229,12 +2469,17 @@ function lvGraph() {
   for (let k = 1; k <= 8; k++) { const q = T.get(`SW${k}Q`), nq = T.get(`SW${k}N`); if (conn(q) || conn(nq)) src('sw' + k, `Switch ${k}`, [[q, 'Q'], [nq, '~Q']], `sw:${k - 1}`, 'Click to toggle').stateT = q; }
   if (conn(CLK_T) || conn(CLKN_T)) src('clk', 'Clock', [[CLK_T, '⊓'], [CLKN_T, '⊔']], 'clk', 'Click to change the range').isClk = true;
   for (let k = 1; k <= 3; k++) { const p = T.get('P' + k), pn = T.get(`P${k}N`); if (conn(p) || conn(pn)) src('p' + k, `Pulse ${k}`, [[p, '⊓'], [pn, '⊔']], `pulse:${k - 1}`, 'Hold for a pulse').stateT = p; }
-  if (conn(T.get('VCC'))) src('vcc', '+5V', [[T.get('VCC'), '']]);
-  if (conn(T.get('GND'))) src('gnd', '0V', [[T.get('GND'), '']]);
-  for (let g = 0; g < 6; g++) if (conn(T.get('H' + g))) src('h' + g, `H · rail ${g + 1}`, [[T.get('H' + g), '']], null, 'Logic 1 through a pull-up resistor');
+  // rails appear only when they feed a logic input (power cables to the modules' +5V / 0V pins aren't logic);
+  // H pins with an output plugged in are just a junction for that output, so they don't appear either
+  const feeds = t => t.net.terms.some(x => x !== t && x.role !== 'pwr' && x.role !== 'jn');
+  const driven = t => t.net.terms.some(x => x.role === 'out');
+  if (feeds(T.get('VCC'))) src('vcc', '+5V', [[T.get('VCC'), '']]);
+  if (feeds(T.get('GND'))) src('gnd', '0V', [[T.get('GND'), '']]);
+  for (let g = 0; g < 6; g++) { const t = T.get('H' + g); if (feeds(t) && !driven(t)) src('h' + g, `H · rail ${g + 1}`, [[t, '']], null, 'Constant logic 1'); }
 
   for (const m of [...modules].sort((a, b) => a.slot - b.slot)) {
     const d = m.def, pd = p => `${m.type} pin ${p} (${d.names[p]})`;
+    if (d.passive) continue;   // splitter rows are only wire junctions: the nets already join through them
     if (d.gates) {
       d.gates.forEach((gt, k) => {
         if (![...gt.i, gt.o].some(p => conn(m.pt[p]))) return;
@@ -2835,7 +3080,7 @@ function optimize(list, keep) {
 }
 const SLOT_PREF = [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
 function dzFail(msg) { const m = $('#dzMsg'); m.textContent = msg; m.classList.add('bad'); toast(msg, true); return false; }
-function dzBuild(skipOpt) {
+function dzBuild(skipOpt, noSplit) {
   $('#dzMsg').classList.remove('bad');
   const byId = new Map(D.nodes.map(n => [n.id, n]));
   const drvOf = new Map(D.wires.map(w => [w.to + ':' + w.port, w.from]));
@@ -2876,11 +3121,15 @@ function dzBuild(skipOpt) {
     if (ins.some(s => s == null)) warns.push(`${dzLabel(g)} has an unwired input. It's left open on the module and reads HIGH.`);
     prims.push({ t: g.t, ins, out: 'n' + g.id, node: g });
   }
-  // fan-out: switch, pulse, LED and display pins have one header, so they can only sit at the two ends of a cable chain
+  // fan-out: switch, pulse, LED and display pins have one header, so they can only sit at the two ends of a cable chain.
+  // A signal that must reach more of them goes through a row of the splitter board, like in the lab; only when there is
+  // no room for a splitter does it get buffer gates instead.
   const leafDrv = s => { const t = sigDrv.get(s); return t && t !== 'CLK' && t !== 'CLKN' ? 1 : 0; };
+  const splitSigs = new Set();
   for (const s of new Set(sinks.map(k => k.sig))) {
     if (s === 'ONE' || s === 'ZERO') continue;
     const mine = sinks.filter(k => k.sig === s);
+    if (!noSplit && leafDrv(s) + mine.length > 2) { splitSigs.add(s); continue; }
     while (leafDrv(s) + mine.length > 2) {
       const b = fresh(), take = mine.splice(-2);
       prims.push({ t: 'buf', ins: [s], out: b, node: null, fan: true });
@@ -2899,7 +3148,8 @@ function dzBuild(skipOpt) {
     const w = STRATS[si];
     if (tried.has(JSON.stringify(w))) continue; tried.add(JSON.stringify(w));
     let n2 = tn; const F = () => 't' + (n2++);
-    const ctxCase = { avail: c => inCase.has(c), memo: new Map(), w }, ctxAny = { avail: () => true, memo: new Map(), w };
+    // "any" chip means any chip that exists in the lab; chips outside the lab set are only used if they are already in the case
+    const ctxCase = { avail: c => inCase.has(c), memo: new Map(), w }, ctxAny = { avail: c => !CHIPS[c].legacy || inCase.has(c), memo: new Map(), w };
     let list = [];
     for (const p0 of prims) {
       const p = { ...p0, ins: p0.ins.slice() };
@@ -2922,6 +3172,8 @@ function dzBuild(skipOpt) {
   const conc = best.list;
   // modules: reuse the ones in the case, add the rest from the drawer
   const insts = [], keepMods = new Set();
+  let splitM = splitSigs.size ? modules.find(m => m.type === 'SPLIT') : null;
+  if (splitM) keepMods.add(splitM);
   for (const [c, cnt] of best.need) {
     const k = Math.ceil(cnt / CHIPS[c].gates.length);
     const ex = modules.filter(m => m.type === c).sort((a, b) => SLOT_PREF.indexOf(a.slot) - SLOT_PREF.indexOf(b.slot)).slice(0, k);
@@ -2930,12 +3182,18 @@ function dzBuild(skipOpt) {
   }
   const newInst = insts.filter(i => !i.m);
   const freeSlots = SLOT_PREF.filter(s => !moduleAt(s)).concat(SLOT_PREF.filter(s => moduleAt(s) && !keepMods.has(moduleAt(s))));
+  if (splitSigs.size && !splitM && newInst.length + 1 > freeSlots.length) return dzBuild(skipOpt, true);   // no slot left for a splitter
   if (newInst.length > freeSlots.length) return dzFail(`This design needs ${insts.length} modules, but the case only has 12 slots. Simplify it, or ${prefer ? 'turn off "Prefer chips already in the case"' : 'split it into parts'}.`);
   // ---- commit ----
   pushUndo();
   for (const w of wires.slice()) removeWire(w);
   const replaced = [];
   newInst.forEach((inst, i) => { const s = freeSlots[i], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } inst.m = createModule(inst.c, s, 0); inst.added = true; });
+  let splitNew = false;
+  if (splitSigs.size && !splitM) { const s = freeSlots[newInst.length], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } splitM = createModule('SPLIT', s, 0); splitNew = true; }
+  if (splitM) rebuild();
+  let splitRow = 1;
+  if (splitM) while (splitRow <= 14 && splitM.pt[splitRow].net.terms.length > 1) splitRow++;   // rows already in use stay as they are
   // gates into chips, keeping connected gates together
   for (const p of conc) {
     const c = chipOfP(p), per = CHIPS[c].gates.length, mine = new Set([...p.ins.filter(Boolean), p.out]);
@@ -2963,7 +3221,7 @@ function dzBuild(skipOpt) {
   const hp = h => headerTop(h, new THREE.Vector3());
   const nearest = (list, p) => { let b = null, bd = 1e9; for (const h of list) { const d = hp(h).distanceTo(p); if (d < bd) { bd = d; b = h; } } return b; };
   const tpos = id => { const f = (hdrs.get(id) || [])[0]; return f ? hp(f) : new THREE.Vector3(); };
-  const hdesc = h => h.mod ? `${h.mod.type} (slot ${h.mod.slot + 1}) pin ${h.pinNo} ${h.mod.def.names[h.pinNo].replace('~', '/')}`
+  const hdesc = h => h.mod && h.mod.def.passive ? `splitter (slot ${h.mod.slot + 1}) row ${h.mod.def.names[h.pinNo]}` : h.mod ? `${h.mod.type} (slot ${h.mod.slot + 1}) pin ${h.pinNo} ${h.mod.def.names[h.pinNo].replace('~', '/')}`
     : /^R(\d)\.(\w+)\./.test(h.id) ? (([, g, k]) => `${k === 'GND' ? '0V' : k === 'VCC' ? '+5V' : 'H'} rail by slot ${+g + 1}`)(/^R(\d)\.(\w+)\./.exec(h.id)) : h.term.label.replace('~', '/');
   const COLS = [0x2c9a3d, 0x2147b8, 0x7a3fb5, 0xe8701a, 0x6b3e1f, 0x8a8a8a, 0xe6e6e6, 0xe6c619];
   const lines = []; let ci = 0, cables = 0;
@@ -2983,6 +3241,18 @@ function dzBuild(skipOpt) {
     if (!e.drv) { warns.push('A signal had no driver and was skipped.'); continue; }
     const color = e.drv === 'CLK' || e.drv === 'CLKN' ? 0xe6c619 : COLS[ci++ % COLS.length];
     const nodes = [...new Set([e.drv, ...e.rd])];
+    if (splitSigs.has(s)) {
+      // rows needed so the tree has enough headers: every cable uses one header at each end
+      const caps = nodes.reduce((a, t) => a + freeH(t).length, 0);
+      let rows = Math.max(1, Math.ceil((2 * (nodes.length - 1) - caps) / 2));
+      while (rows > 0 && splitRow <= 14) { nodes.push(splitM.pt[splitRow++].id); rows--; }
+      if (rows > 0) warns.push('The splitter has no free row left for one of the signals.');
+      const byTerm = headersByTerm(), n0 = wires.length;
+      const bad = layTree(nodes.map(t => T.get(t)), T.get(e.drv), byTerm, color);
+      if (bad) warns.push(`${bad} connection(s) on one signal could not be wired: not enough free headers.`);
+      for (const w of wires.slice(n0)) { cables++; lines.push(`${hdesc(H.get(w.a))} → ${hdesc(H.get(w.b))}`); }
+      continue;
+    }
     const leaves = nodes.filter(t => (hdrs.get(t) || []).length === 1);
     const start = leaves[0] || e.drv, end = leaves[1] || null;
     if (leaves.length > 2) warns.push(`${leaves.length - 2} single-pin connection(s) on one signal could not be wired.`);
@@ -2997,6 +3267,7 @@ function dzBuild(skipOpt) {
       cable(ha, hb, color);
     }
   }
+  if (!S.autoPower) wirePower(insts.map(i => i.m), { quiet: true });   // every module in use gets +5V and 0V
   rebuild(); save();
   // optional: shorten the runs by moving modules and swapping equivalent gates, then follow the moves
   let optInfo = null;
@@ -3029,6 +3300,7 @@ function dzBuild(skipOpt) {
     ...clks.map(n => `${esc(n.name || 'clock')} = clock ${n.low ? '⊔' : '⊓'}`), ...leds.map(n => `${esc(n.name || 'LED')} = LED ${ledN.get(n)}`), ...hexes.map(() => 'display = 2⁰–2³ inputs')].join(' · ');
   const perGate = gates.map(g => { const ps = conc.filter(p => p.node === g); return `${esc(dzLabel(g))} → ${ps.map(p => `${p.inst.c}/slot ${p.inst.m.slot + 1} gate ${p.g + 1}`).join(', ') || 'merged into its neighbours (or its output is unused)'}`; });
   $('#dzSum').innerHTML = `<p><b>${insts.length} module${insts.length === 1 ? '' : 's'}, ${conc.length} gates, ${cables} cables.</b> ${esc(modsTxt)}.</p>`
+    + (splitM && splitSigs.size ? `<p>Splitter in slot ${splitM.slot + 1}${splitNew ? ' (new)' : ''} fans out ${splitSigs.size} signal${splitSigs.size === 1 ? '' : 's'} to more single-pin ends than a chain can reach.</p>` : '')
     + (replaced.length ? `<p>Replaced to make room: ${esc(replaced.join(', '))}.</p>` : '')
     + `<p>${ioTxt}</p><p>${perGate.join('<br>')}</p>`
     + (optInfo && optInfo.applied ? `<p>Optimizer: cable runs ${optInfo.before.toFixed(0)} → ${optInfo.after.toFixed(0)} cm (${optInfo.pct}% shorter), ${optInfo.moved} module${optInfo.moved === 1 ? '' : 's'} moved, ${optInfo.turned} turned, ${optInfo.gateMoves} gate${optInfo.gateMoves === 1 ? '' : 's'} reassigned.</p>` : '')
@@ -3092,7 +3364,9 @@ function optimizeBench(opts = {}) {
     if (n.terms.length < 2) continue;
     const kinds = new Set(n.terms.map(railOf).filter(Boolean));
     if (kinds.size > 1) continue;
-    owned.push({ n, rail: kinds.size ? [...kinds][0] : null, eps: [], cost: 0, color: 0x2c9a3d });
+    // an output plugged into H uses the H pins as a junction (the output overrides the pull-up), so that net keeps its H pins
+    const hJunction = kinds.has('H') && n.terms.some(t => t.role === 'out');
+    owned.push({ n, rail: kinds.size && !hJunction ? [...kinds][0] : null, eps: [], cost: 0, color: 0x2c9a3d });
   }
   const ownedOf = new Map(owned.map(o => [o.n, o]));
   const conn = t => t.net.terms.length > 1;
@@ -3119,7 +3393,7 @@ function optimizeBench(opts = {}) {
   }
   const modOfTerm = new Map(); for (const m of modules) for (let p = 1; p <= m.def.pins; p++) modOfTerm.set(m.pt[p].id, [m, p]);
   for (const o of owned) for (const t of o.n.terms) {
-    if (railOf(t) || gateTerm.has(t.id)) continue;
+    if ((o.rail && railOf(t)) || gateTerm.has(t.id)) continue;
     const mp = modOfTerm.get(t.id);
     if (mp) { o.eps.push({ m: mp[0], p: mp[1] }); mp[0]._fixedNets.add(o); }
     else {
@@ -3128,7 +3402,7 @@ function optimizeBench(opts = {}) {
       o.eps.push({ pos: [x / hs.length, z / hs.length], leaf: hs.length === 1, term: t.id });
     }
   }
-  const pinXZ = (m, p) => { const { side, z } = pinLocal(m.def.pins, p); let x = side * 3.275, zz = z; if (m._r) { x = -x; zz = -zz; } return [SLOT_X(m._s) + x, SLOT_Z(m._s) + zz]; };
+  const pinXZ = (m, p) => { const { side, z } = pinGeo(m.def, m.variant, p); let x = side * 3.275, zz = z; if (m._r) { x = -x; zz = -zz; } return [SLOT_X(m._s) + x, SLOT_Z(m._s) + zz]; };
   const gatePin = (L, j) => { const gt = CHIPS[L.c].gates[L.loc.gi]; return j < 0 ? gt.o : gt.i[L.perm[j]]; };
   const epPos = e => e.pos || (e.m ? pinXZ(e.m, e.p) : pinXZ(e.L.loc.m, gatePin(e.L, e.j)));
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -3238,17 +3512,26 @@ function optimizeBench(opts = {}) {
   const tpos = id => { const hs = hdrs.get(id) || [], v = new THREE.Vector3(); hs.forEach(h => v.add(hp(h))); return v.multiplyScalar(1 / Math.max(1, hs.length)); };
   const nearest = (list, p) => { let b = null, bd = 1e9; for (const h of list) { const d = hp(h).distanceTo(p); if (d < bd) { bd = d; b = h; } } return b; };
   const railH = { GND: [], VCC: [], H: [] }; for (const h of H.values()) { const r = RAIL_RE.exec(h.id); if (r) railH[r[1]].push(h); }
+  const byTerm = headersByTerm(), termObj = id => hdrs.get(id)[0].term;   // (T is the annealing temperature in here)
+  // H pins carrying a signal (used as a junction) must not also be handed out as logic 1
+  const jT = new Set(owned.filter(o => !o.rail).flatMap(o => o.n.terms.filter(t => railOf(t) === 'H')));
+  railH.H = railH.H.filter(h => !jT.has(h.term));
   let failed = 0;
-  for (const o of owned) {
+  for (const o of [...owned].sort((a, b) => !!a.rail - !!b.rail)) {   // signals first, then the rails
     const terms = [...new Set(o.eps.map(termOf))];
     if (o.rail) {
-      for (const t of terms) {
-        const th = nearest(freeH(t), tpos(t)), rh = th && nearest(railH[o.rail].filter(h => !h.wire), hp(th));
-        if (th && rh) addWire(rh.id, th.id, o.color); else failed++;
-      }
+      // straight to the rail, or chained from a neighbour's spare header (power pins of modules side by side)
+      failed += railTree(terms.map(termObj), railH[o.rail], o.color, byTerm).failed;
       continue;
     }
     if (terms.length < 2) continue;
+    // a splitter row or H pins as a hub, or more single-header ends than a chain has: lay it as a tree
+    const nLeaf = terms.filter(t => (hdrs.get(t) || []).length === 1).length;
+    if (nLeaf > 2 || terms.some(t => (hdrs.get(t) || []).length > 2)) {
+      const tt = terms.map(termObj), root = tt.find(t => t.role === 'out') || tt.find(t => byTerm.get(t).length > 2) || tt[0];
+      failed += layTree(tt, root, byTerm, o.color);
+      continue;
+    }
     const ord = orderChain(terms, tpos, t => (hdrs.get(t) || []).length === 1);
     for (let i = 0; i + 1 < ord.length; i++) {
       const ha = nearest(freeH(ord[i]), tpos(ord[i + 1])), hb = ha && nearest(freeH(ord[i + 1]), hp(ha));
@@ -3556,7 +3839,7 @@ function ttSynthSmart() {
   // A gate costs 1, plus a hair for the less "textbook" ones, so equal-size solutions come out the way a person writes them.
   // Like a person at the lab bench, it designs for the chips actually in the case: a gate type with no chip in the case
   // costs what its replacement costs (no 7408 → AND = NAND + NOT, no 7432 → OR = NOR + NOT, …).
-  const inCase = new Set(modules.map(m => m.type)), has = c => !modules.length || inCase.has(c);
+  const inCase = new Set(modules.map(m => m.type)), has = c => inCase.has(c) || (!modules.length && !CHIPS[c].legacy);
   const hasNand = has('7400') || has('7410') || has('7420') || has('7430');
   const W = { nand: hasNand ? 1 : 2, not: 1, and: has('7408') ? 1 : 2, or: has('7432') ? 1 : 2.1, nor: has('7402') ? 1.02 : 2.1,
     xor: has('7486') ? 1.05 : 4, xnor: has('7486') ? 1.15 : 5 };
@@ -3717,6 +4000,9 @@ const slotTag = s => 'M' + (s + 1);
 function endText(h) {
   if (h.mod) {
     const m = h.mod, nm = m.def.names[h.pinNo];
+    // boards labelled by function (7483) have no pin numbers, so the sheet names the header instead
+    if (m.def.passive) return { place: `<b>${slotTag(m.slot)}</b> splitter`, pin: `row <b class="mono">${nm}</b>`, key: [2, m.slot, h.pinNo] };
+    if (m.def.layout) return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b class="mono">${pinHTML(nm === 'VCC' ? '+5V' : nm === 'GND' ? '0V' : nm)}</b>`, key: [2, m.slot, h.pinNo] };
     return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b>${h.pinNo}</b>${nm && nm !== 'NC' ? ' <span class="mono">' + pinHTML(nm) + '</span>' : ''}`, key: [2, m.slot, h.pinNo] };
   }
   const id = h.term.id; let r;
@@ -3753,9 +4039,11 @@ function wiringPlan() {
   for (const [net, ws] of byNet) {
     const adj = new Map(), add = (t, w) => { if (!adj.has(t)) adj.set(t, []); adj.get(t).push(w); };
     for (const w of ws) { add(H.get(w.a).term.id, w); add(H.get(w.b).term.id, w); }
-    const rank = id => /^(GND|VCC|H\d)$/.test(id) ? 4 : (T.get(id).role === 'out' ? 3 : 0) + (adj.get(id).length === 1 ? 1 : 0);
+    const hasOut = [...adj.keys()].some(t => T.get(t).role === 'out');   // then H pins on this net are only a junction
+    const isRail = id => /^(GND|VCC)$/.test(id) || (/^H\d$/.test(id) && !hasOut);
+    const rank = id => isRail(id) ? 4 : (T.get(id).role === 'out' ? 3 : 0) + (adj.get(id).length === 1 ? 1 : 0);
     const start = [...adj.keys()].sort((a, b) => rank(b) - rank(a))[0];
-    const rail = /^(GND|VCC|H\d)$/.test(start);
+    const rail = isRail(start);
     // walk the cables from the source: depth first, so a daisy chain reads as one line of steps
     const rows = [], seen = new Set(), visited = new Set([start]);
     const walk = t => {
@@ -3777,8 +4065,9 @@ function wiringPlan() {
     let labelHTML = label ? esc(label) : '';
     if (!label) {
       const sh = H.get(adj.get(start)[0].a).term.id === start ? H.get(adj.get(start)[0].a) : H.get(adj.get(start)[0].b);
-      if (rail) labelHTML = { GND: 'logic 0 (0V rail)', VCC: '+5V' }[start] || 'logic 1 (H rail)';
-      else if (sh.mod) labelHTML = `${slotTag(sh.mod.slot)} pin ${sh.pinNo} <span class="mono">${pinHTML(sh.mod.def.names[sh.pinNo])}</span>`;
+      const power = [...adj.keys()].some(t => T.get(t).role === 'pwr' && t.startsWith('m'));   // cables to the modules' +5V / 0V pins
+      if (rail) labelHTML = power ? { GND: 'Power · 0V', VCC: 'Power · +5V' }[start] : { GND: 'logic 0 (0V rail)', VCC: 'logic 1 (+5V)' }[start] || 'logic 1 (H rail)';
+      else if (sh.mod) labelHTML = sh.mod.def.layout ? `${slotTag(sh.mod.slot)} <span class="mono">${pinHTML(sh.mod.def.names[sh.pinNo])}</span>` : `${slotTag(sh.mod.slot)} pin ${sh.pinNo} <span class="mono">${pinHTML(sh.mod.def.names[sh.pinNo])}</span>`;
       else labelHTML = startEnd.place + (startEnd.pin ? ' ' + startEnd.pin : '');
     }
     const cat = rail ? 0 : startEnd.key[0] === 1 ? 1 : startEnd.key[0] === 2 ? 2 : 3;
@@ -3844,7 +4133,7 @@ function buildPrintSheet(o) {
     };
     left.push(`<h2>1 · Modules in the case</h2>
       <table class="case"><tr>${[0, 1, 2, 3, 4, 5].map(cell).join('')}</tr><tr class="rail"><td colspan="6">rail: 0V · H · +5V for each column</td></tr><tr>${[6, 7, 8, 9, 10, 11].map(cell).join('')}</tr></table>
-      <p>Seen from the front (switch panel nearest you). Grey = not used. ${S.autoPower ? 'Power comes through the mounting posts, so there are no power cables.' : 'Power is wired by hand; see the wiring list.'}</p>`);
+      <p>Seen from the front (switch panel nearest you). Grey = not used. ${S.autoPower ? 'Power cables are left out (shortcut setting): connect +5V and 0V of every module used.' : 'Power cables come first in the wiring list.'}</p>`);
   }
   if (o.tt) {
     const t = benchTable();
