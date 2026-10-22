@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, inspector right); the module rack, help pamphlet and oscilloscope are on the table in 3D. */
+/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, cable and settings panels right); the module rack, lab manual, floppy drive and oscilloscope are on the table in 3D. */
 :root{
   --bg:#141619; --panel:#1c1f23; --panel-2:#252930; --line:#343a42; --fg:#e7e4da; --muted:#9b9d97;
   --accent:#d3a24a; --accent-ink:#1b1408; --hi:#ff4d3d; --lo:#37c96a; --float:#8fa3c4; --warn:#ffb020;
@@ -50,16 +50,11 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .pill.fault i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
 
 .float{position:fixed;z-index:4;background:rgba(28,31,35,.94);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-.float h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0}
-
 #info{right:max(12px,env(safe-area-inset-right,0px));top:64px;width:300px;max-height:calc(100% - 150px);overflow:auto;padding:14px}
 #info .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 #info .sub{color:var(--muted);margin:2px 0 10px}
-.dip{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;font-family:var(--f-mono);font-size:12px}
-.dip div{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #2b3037}
-.dip .r{flex-direction:row-reverse;text-align:right}
-.dip b{color:var(--accent);font-weight:500;min-width:18px}
-.dip .out{color:#ffb4a8}.dip .pwr{color:var(--muted)}
+.float h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0}
+
 .ov{text-decoration:overline}
 
 #dock{left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;padding:8px 12px;flex-wrap:wrap;right:auto;max-width:calc(100% - 24px)}
@@ -134,6 +129,30 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .hp-cols p,.hp-cols li{line-height:1.45;margin:3px 0}
 .hp-cols ul{padding-left:18px;margin:2px 0}
 .hp-cols kbd{font-family:var(--f-mono);font-size:11.5px;background:#e5e0d1;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.hp-tabs{display:flex;gap:6px;margin:8px 26px 0}
+.hp-tabs button{font:600 12.5px var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:4px 10px}
+.hp-tabs button[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:#efebe0}
+/* datasheet pages */
+.ds{flex:1;min-height:0;display:flex;flex-direction:column;margin:8px 26px 14px;overflow:hidden}
+.ds-index{display:flex;flex-wrap:wrap;gap:4px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.ds-index button{font:500 11.5px var(--f-mono);padding:2px 6px}
+.ds-index button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ds-page{flex:1;min-height:0;overflow:auto;padding-top:8px;line-height:1.4}
+.ds-page h2{font:700 30px var(--f-display);margin:0;letter-spacing:.03em}
+.ds-page .sub{color:var(--muted);margin:0 0 8px}
+.ds-page p{margin:6px 0}
+.ds-chip{display:grid;grid-template-columns:1fr 64px 1fr;margin:10px 0;font:12.5px var(--f-mono)}
+.ds-chip .body{grid-row:1/span 99;grid-column:2;border:2px solid var(--fg);border-radius:4px;background:#fbf9f3;position:relative}
+.ds-chip .body::before{content:'';position:absolute;top:-2px;left:50%;width:18px;height:9px;margin-left:-9px;border:2px solid var(--fg);border-top:0;border-radius:0 0 9px 9px;background:#efebe0}
+.ds-chip .body span{position:absolute;inset:auto 0 8px;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);left:50%;margin-left:-8px;font-weight:600}
+.ds-chip .l,.ds-chip .r{display:flex;align-items:center;gap:6px;height:24px}
+.ds-chip .l{grid-column:1;justify-content:flex-end}.ds-chip .r{grid-column:3}
+.ds-chip b{display:inline-block;min-width:20px;text-align:center;border:1px solid var(--line);border-radius:3px;background:#e5e0d1;font-weight:600}
+.ds-chip .out{color:#b02a1f;font-weight:600}.ds-chip .pwr{color:var(--muted)}
+.ds-pins{columns:2;font:12.5px var(--f-mono);margin:10px 0}
+.ds-pins div{break-inside:avoid;padding:1px 0}
+.ds-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ds-ok{color:#2f7d4c;font-weight:600}.ds-bad{color:#b02a1f;font-weight:600}
 .hp-nav{display:flex;align-items:center;justify-content:space-between;margin:0 22px;padding:10px 0 16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 .segm{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .segm button{border:0;border-radius:0;background:var(--panel)}
@@ -346,16 +365,18 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
     </div>
   </div>
 </div>
-<div class="paper" id="pHelp" aria-label="Help pamphlet">
-  <header class="ph"><b class="ph-t">UNILOG-2</b><span class="ph-k">Bench guide</span></header>
+<div class="paper" id="pHelp" aria-label="Lab manual: bench guide and datasheets">
+  <header class="ph"><b class="ph-t">UNILOG-2</b><span class="ph-k">Lab manual</span></header>
+  <nav class="hp-tabs"><button id="hpTabGuide" aria-pressed="true">Bench guide</button><button id="hpTabDs" aria-pressed="false">Datasheets</button></nav>
+  <div class="ds" id="ds" hidden><div class="ds-index" id="dsIndex"></div><div class="ds-page" id="dsPage"></div></div>
   <div class="hp-body"><div class="hp-cols"><h2>Working the UNILOG-2 bench</h2>
     <p style="color:var(--muted);margin-top:-2px">UNILOG-2 simulator by <b style="color:var(--accent)">daamioo</b></p>
-    <p>The case works like the one in the lab. Modules sit in 12 slots. A module works only once it has power: cable its +5V (VCC) and 0V (GND) pins to the rail. Until then its outputs are dead. <b>Wire power</b> in the inspector does it for you, and the design builder cables power for every module it uses. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
+    <p>The case works like the one in the lab. Modules sit in 12 slots. A module works only once it has power: cable its +5V (VCC) and 0V (GND) pins to the rail. Until then its outputs are dead. <b>Wire power</b> on the module's datasheet page in this manual does it for you, and the design builder cables power for every module it uses. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
     <h3>Wiring</h3>
     <ul>
       <li>Click a pin, then click another pin to run a cable. Dragging from pin to pin also works.</li>
       <li>Drag a cable end off its pin to move it. Release it on empty space to unplug it.</li>
-      <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in the inspector.</li>
+      <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in its panel.</li>
       <li><kbd>Esc</kbd> cancels a cable you're placing.</li>
       <li>The dupont cables lying along the front edge of the panel set the colour of new cables: click one to use its colour, or the rainbow jumpers for a different colour every time. With a cable selected, clicking one also recolours that cable.</li>
     </ul>
@@ -363,7 +384,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
     <ul>
       <li>Drag a board from the module rack (on the table left of the case) onto a slot, or click it to drop it in the first free slot. On an empty slot it goes in. On a module with no cables it replaces that module. A module with cables on it stays put: unplug them first.</li>
       <li>Drag a module that's already in the case to move it. Dropping it on another module swaps the two, and the cables go with them. Drop it outside the case to put it back on the rack.</li>
-      <li>Click a module to see its pinout and whether it is powered. <kbd>R</kbd> turns it 180°.</li>
+      <li>Click a module to open its datasheet in this manual (the <b>Datasheets</b> tab): the pinout, whether it is powered, which slots hold that chip, and buttons to wire its power, turn it, swap its board or return it to the rack. <kbd>R</kbd> turns it 180°. The row of chip numbers at the top of the tab looks up any other chip.</li>
       <li>The <b>splitter</b> board (at the end of the rack) has 14 rows of 4 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
     </ul>
     <h3>Panel</h3>
@@ -419,6 +440,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
   </div>
   <div id="status" class="pill"><i></i><span>…</span></div>
 </header>
+
 
 
 <section id="info" class="float" hidden></section>
@@ -882,7 +904,7 @@ function buildCase() {
   paper(SHEET.diag, 29.7, 21, -11, 24.5, -0.012);
   paper(SHEET.tt, 21, 29.7, 15.6, 28.85, 0.018);
   // the help pamphlet lies on the table to the right of the case, on top of a few pages' worth of thickness
-  const pam = new THREE.Group(); pam.position.set(45, -6.6, 13); pam.rotation.y = -0.16; scene.add(pam);
+  const pam = new THREE.Group(); pam.position.set(42.8, -6.6, 13); pam.rotation.y = -0.16; scene.add(pam);
   box(14.8, 0.18, 21, new THREE.MeshStandardMaterial({ color: 0xd9d3c3, roughness: 0.9 }), 0, 0.09, 0, pam);
   const hp = new THREE.Mesh(new THREE.PlaneGeometry(14.8, 21), PUNCH);
   hp.rotation.x = -Math.PI / 2; hp.position.y = 0.185; pam.add(hp); SHEET.help.mesh = hp;
@@ -1975,7 +1997,7 @@ const EX_NOTES = {
 };
 
 /* ================================================================
-   UI: inspector, toasts, tooltip
+   UI: toasts, tooltip
    ================================================================ */
 function toast(msg, bad = false) {
   const el = document.createElement('div'); el.className = 'toast' + (bad ? ' bad' : ''); el.textContent = msg;
@@ -2054,42 +2076,19 @@ function select(s) {
   if (selected && selected.m) selected.m.mat.emissive.setHex(0);
   if (selected && selected.w) { selected.w.mat.emissive.setHex(0); selected.w.glow = ''; }
   selected = s;
+  if (s && s.m) { s.m.mat.emissive.setHex(0x2a1d00); dsShow(s.m.type); hpTab('ds'); }
+  else dsShow(DS.type);   // the page stays open, without the selected module's buttons
+  // a selected cable gets a small panel: modules have their datasheet in the manual instead
   const info = $('#info');
-  if (!s) { info.hidden = true; return; }
+  if (!(s && s.w)) { info.hidden = true; return; }
+  s.w.mat.emissive.setHex(0x444444);
+  const a = H.get(s.w.a), b = H.get(s.w.b);
+  info.innerHTML = `<h2>Cable</h2><p class="sub">${headerName(a)} → ${headerName(b)}</p>
+    <p class="sub">Level: <b>${stateText(a.term.net)}</b>. Click a dupont cable on the front of the panel to recolour it.</p>
+    <div class="row"><button id="iDel">Unplug (Del)</button><button id="iClose">Close</button></div>`;
+  $('#iDel').onclick = () => { pushUndo(); removeWire(s.w); rebuild(); save(); };
+  $('#iClose').onclick = () => select(null);
   $('#settings').hidden = true; $('#bSet').setAttribute('aria-pressed', 'false');
-  if (s.m) {
-    s.m.mat.emissive.setHex(0x2a1d00);
-    const d = s.m.def, n = d.pins, half = n / 2;
-    let rows = '';
-    for (let i = 1; i <= half; i++) {
-      const l = i, r = n + 1 - i, cl = p => pinRole(d, p);
-      rows += `<div class="${cl(l)}"><b>${l}</b>${pinHTML(d.names[l])}</div><div class="r ${cl(r)}"><b>${r}</b>${pinHTML(d.names[r])}</div>`;
-    }
-    const vs = BOARD_VARIANTS[s.m.type] || [];
-    const where = d.passive ? 'Every row is one point: the four headers of a row are joined on the board. Use it to send one signal to more places than the two headers of a chip pin allow. It needs no power.'
-      : d.layout ? 'This board has no pin numbers: its headers are labelled by function.'
-      : s.m.variant === 'mirrored' ? 'Gray board with mirrored pin numbers: pins are numbered mirrored, with pin 1 at the bottom left and the notch at the bottom.'
-      : `Pin 1 sits by the notch${s.m.rot ? ', which is now facing you' : ''}.`;
-    info.innerHTML = `<h2>${s.m.type}</h2><p class="sub">${d.desc} · ${VARIANT_NAME[s.m.variant] || 'board'} · slot ${s.m.slot + 1} (${s.m.slot < 6 ? 'back' : 'front'} row)${s.m.rot ? ' · turned 180°' : ''}</p>
-      ${d.legacy ? '<p class="sub" style="color:#ffd27a">This chip is not in the lab set (it doesn\'t appear in the photos of the case or the module box). It is kept so older benches still load.</p>' : ''}
-      <div class="dip">${rows}</div>
-      <p class="sub" style="margin-top:10px">${d.passive ? '' : 'Outputs in red. '}${where}</p>
-      ${d.passive ? '' : `<p class="sub">Power: ${S.autoPower ? 'shortcut on, powered without cables' : s.m.powered ? '<b style="color:#8be28b">wired, powered</b>' : `<b style="color:#ff9b8a">not powered</b>, cable pin ${d.vcc} (+5V) and pin ${d.gnd} (0V) to the rail`}</p>`}
-      <div class="row">${d.passive || S.autoPower || s.m.powered ? '' : '<button id="iPwr">Wire power</button>'}<button id="iRot">Turn 180° (R)</button>${vs.length > 1 ? `<button id="iVar">Use the ${s.m.variant === 'mirrored' ? 'cream' : 'gray mirrored'} board</button>` : ''}<button id="iDel">Return to rack</button><button id="iClose">Close</button></div>`;
-    $('#iRot').onclick = () => rotateModule(s.m);
-    if ($('#iPwr')) $('#iPwr').onclick = () => { pushUndo(); wirePower([s.m]); save(); select(s); toast(`${s.m.type}: +5V and 0V cabled to the rail.`); };
-    if ($('#iVar')) $('#iVar').onclick = () => setBoardVariant(s.m, s.m.variant === 'mirrored' ? 'cream' : 'mirrored');
-    $('#iDel').onclick = () => { pushUndo(); const t = s.m.type; destroyModule(s.m); rebuild(); save(); toast(`${t} is back on the rack.`); };
-    $('#iClose').onclick = () => select(null);
-  } else if (s.w) {
-    s.w.mat.emissive.setHex(0x444444);
-    const a = H.get(s.w.a), b = H.get(s.w.b);
-    info.innerHTML = `<h2>Cable</h2><p class="sub">${headerName(a)} → ${headerName(b)}</p>
-      <p class="sub">Level: <b>${stateText(a.term.net)}</b>. Pick a colour in the dock to recolour it.</p>
-      <div class="row"><button id="iDel">Unplug (Del)</button><button id="iClose">Close</button></div>`;
-    $('#iDel').onclick = () => { pushUndo(); removeWire(s.w); rebuild(); save(); };
-    $('#iClose').onclick = () => select(null);
-  }
   info.hidden = false;
 }
 function headerName(h) {
@@ -2335,7 +2334,7 @@ function controlTip(ud) {
     case 'scscreen': return `<div class="t">Oscilloscope screen</div><div class="k">Click to ${camView === 'scope' ? 'step back' : 'look at it up close'}</div>`;
     case 'rack': return `<div class="t">${ud.type} · ${CHIPS[ud.type].desc}</div><div class="k">Drag onto a slot to fit it, or click to drop it in the first free slot</div>`;
     case 'latch': return `<div class="t">Case latch</div><div class="k">Click to ${CASE.open ? 'close' : 'open'} the case</div>`;
-    case 'module': return `<div class="t">${ud.m.type} · ${ud.m.def.desc}</div><div class="k">Click for the pinout. Drag to move it, R to turn it.</div>`;
+    case 'module': return `<div class="t">${ud.m.type} · ${ud.m.def.desc}</div><div class="k">Click to open its datasheet in the lab manual. Drag to move it, R to turn it.</div>`;
   }
   return '';
 }
@@ -4706,6 +4705,53 @@ function hpShow(i) {
   $('#hpNum').textContent = `Page ${HP.page + 1} of ${HP.n}`;
   $('#hpPrev').disabled = HP.page === 0; $('#hpNext').disabled = HP.page === HP.n - 1;
 }
+// the manual has two parts: the bench guide and the datasheets
+function hpTab(t) {
+  $('#hpTabGuide').setAttribute('aria-pressed', String(t === 'guide')); $('#hpTabDs').setAttribute('aria-pressed', String(t === 'ds'));
+  $('#pHelp .hp-body').hidden = $('#pHelp .hp-nav').hidden = t !== 'guide'; $('#ds').hidden = t !== 'ds';
+  if (t === 'guide') hpShow(HP.page);
+}
+$('#hpTabGuide').onclick = () => hpTab('guide');
+$('#hpTabDs').onclick = () => hpTab('ds');
+// Datasheets: one page per lab module, with its pinout drawn like the chip, and the selected module's own controls
+const DS = { type: '7400' };
+const DS_TYPES = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp && !CHIPS[k].legacy));
+$('#dsIndex').innerHTML = DS_TYPES.map(k => `<button data-ds="${k}">${k === 'SPLIT' ? 'Splitter' : k}</button>`).join('');
+$('#dsIndex').onclick = e => { const b = e.target.closest('[data-ds]'); if (b) dsShow(b.dataset.ds); };
+function dsShow(type) {
+  if (!CHIPS[type]) return;
+  DS.type = type;
+  const d = CHIPS[type], m = selected && selected.m && selected.m.type === type ? selected.m : null;
+  [...$('#dsIndex').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ds === type)));
+  const role = p => pinRole(d, p), pin = p => `<b>${p}</b><span class="${role(p)}">${pinHTML(d.names[p])}</span>`;
+  let pins;
+  if (d.passive || d.layout) pins = `<div class="ds-pins">${Array.from({ length: d.pins }, (_, i) => `<div>${pin(i + 1)}</div>`).join('')}</div>`;
+  else {
+    const half = d.pins / 2; let rows = '';
+    for (let i = 1; i <= half; i++) rows += `<div class="l" style="grid-row:${i}"><span class="${role(i)}">${pinHTML(d.names[i])}</span><b>${i}</b></div><div class="r" style="grid-row:${i}"><b>${d.pins + 1 - i}</b><span class="${role(d.pins + 1 - i)}">${pinHTML(d.names[d.pins + 1 - i])}</span></div>`;
+    pins = `<div class="ds-chip"><div class="body"><span>${type}</span></div>${rows}</div>`;
+  }
+  const slots = modules.filter(x => x.type === type).sort((a, b) => a.slot - b.slot).map(x => `slot ${x.slot + 1}`);
+  const vs = BOARD_VARIANTS[type] || [];
+  let h = `<h2>${type === 'SPLIT' ? 'Splitter' : type}</h2><p class="sub">${d.desc} · ${d.pins} ${d.passive ? 'headers' : 'pins'} · boards: ${vs.map(v => VARIANT_NAME[v] || v).join(', ') || 'one'}</p>${pins}`;
+  h += `<p>${d.passive ? 'Every row is one point: the four headers of a row are joined on the board. Use it to send one signal to more places than the two headers of a chip pin allow. It needs no power.'
+    : `Outputs in red. Power: pin ${d.vcc} to +5V, pin ${d.gnd} to 0V. Inputs that aren't wired float HIGH.`}${d.layout ? ' This board has no pin numbers: its headers are labelled by function.' : ''}</p>`;
+  h += `<p>${slots.length ? 'In the case: ' + slots.join(', ') + '.' : 'Not in the case: drag it from the rack.'}</p>`;
+  if (m) {
+    const where = d.passive || d.layout ? '' : m.variant === 'mirrored' ? ' Gray board with mirrored pin numbers: pins are numbered mirrored, with pin 1 at the bottom left and the notch at the bottom.' : ` Pin 1 sits by the notch${m.rot ? ', which is now facing you' : ''}.`;
+    h += `<p><b>Selected: slot ${m.slot + 1}</b> (${m.slot < 6 ? 'back' : 'front'} row), ${VARIANT_NAME[m.variant] || 'board'}${m.rot ? ', turned 180°' : ''}.${where}</p>`;
+    if (!d.passive) h += `<p>Power: ${S.autoPower ? 'shortcut on, powered without cables' : m.powered ? '<span class="ds-ok">wired, powered</span>' : `<span class="ds-bad">not powered</span>: cable pin ${d.vcc} (+5V) and pin ${d.gnd} (0V) to the rail`}.</p>`;
+    h += `<div class="ds-row">${d.passive || S.autoPower || m.powered ? '' : '<button id="iPwr">Wire power</button>'}<button id="iRot">Turn 180° (R)</button>${vs.length > 1 ? `<button id="iVar">Use the ${m.variant === 'mirrored' ? 'cream' : 'gray mirrored'} board</button>` : ''}<button id="iDel">Return to rack</button></div>`;
+  }
+  $('#dsPage').innerHTML = h;
+  if (m) {
+    $('#iRot').onclick = () => rotateModule(m);
+    if ($('#iPwr')) $('#iPwr').onclick = () => { pushUndo(); wirePower([m]); save(); select({ m }); toast(`${m.type}: +5V and 0V cabled to the rail.`); };
+    if ($('#iVar')) $('#iVar').onclick = () => setBoardVariant(m, m.variant === 'mirrored' ? 'cream' : 'mirrored');
+    $('#iDel').onclick = () => { pushUndo(); const t = m.type; destroyModule(m); rebuild(); save(); toast(`${t} is back on the rack.`); };
+  }
+}
+dsShow(DS.type);
 $('#hpPrev').onclick = () => hpShow(HP.page - 1);
 $('#hpNext').onclick = () => hpShow(HP.page + 1);
 hpShow(0);
@@ -4727,6 +4773,7 @@ function paperTick() {
   const tk = benchVersion + '|' + powerOn;
   if (tk !== PAPER.ttKey) {
     PAPER.ttKey = tk;
+    dsShow(DS.type);   // the datasheet lists which slots hold the chip, and the selected module's power
     if (wires.length && !dzLive()) { if (benchHasMemory()) ttMsg('This circuit has memory, so the table is not measured automatically. Press Bench to record it row by row.'); else ttFromBench(true); }
   }
 }
