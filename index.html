@@ -399,9 +399,9 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>The design builder runs the same optimizer after a build when <b>Optimize placement and cable runs</b> is ticked. It fills one chip before starting the next, and it uses spare gates on chips it already needs (for example, a spare XOR with H as an inverter) before adding a module. In Settings you can stop it turning modules, or keep every gate where it is so that only modules move and cables are re-laid.</li>
     </ul>
     <h3>Printing a lab sheet</h3>
-    <ul><li><b>Print</b> on the top bar makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
+    <ul><li>The little receipt printer on top of the floppy drive makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
     <h3>The case</h3>
-    <ul><li>Saving and loading happen on the floppy drive on the table behind the module rack. <b>SAVE</b> writes the bench to a file and <b>LOAD</b> reads one back (dropping a file on the page works too). Click the drive itself to copy the bench as text or paste one in. The floppies next to it hold the examples: click one to put it in the drive and load it.</li>
+    <ul><li>Saving and loading happen on the floppy drive on the table behind the module rack. <b>SAVE</b> writes the bench to a file and <b>LOAD</b> reads one back (dropping a file on the page works too). Click the drive itself to copy the bench as text or paste one in. The floppies next to it hold the examples: click one to put it in the drive's slot, then press <b>LOAD</b> to load it (it replaces the bench, and Undo brings yours back). Click the floppy in the slot to take it back out.</li>
       <li>Press either latch on the front of the case to close the lid, and press it again to open it. While the lid is shut, the bench ignores clicks, but the circuit keeps running if MAINS is on.</li></ul>
     <h3>Camera</h3>
     <ul><li>Right-drag to orbit, middle-drag to pan, scroll to zoom. That works over the sheets and this pamphlet too. On touch screens, use two fingers. This pamphlet lies on the table to the right of the case.</li></ul>
@@ -417,7 +417,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
     <button id="bClear">Clear wires</button>
     <button id="bOpt" title="Shorten the cable runs: rearranges modules and equivalent gates, then re-lays the cables. The circuit stays the same.">Optimize</button>
     <button id="bLogic" aria-pressed="false" title="Logic view (L)">Logic view</button>
-    <button id="bPrint" title="Print a lab sheet: case layout, truth table, logic diagram and a numbered wiring list">Print</button>
     <button id="bSet" aria-pressed="false">Settings</button>
   </div>
   <div id="status" class="pill"><i></i><span>…</span></div>
@@ -2298,9 +2297,10 @@ function controlTip(ud) {
     case 'mains': return `<div class="t">MAINS ${S.mains ? 'ON' : 'OFF'}</div><div class="k">Click to switch the case ${S.mains ? 'off' : 'on'}</div>`;
     case 'probe': return `<div class="t">Probe socket</div><div class="k">Hover any pin to read its level</div>`;
     case 'bnc': return `<div class="t">Oscilloscope input ${ud.ch}</div><div class="k">Wire a signal to the pin beside it. It is cabled to the scope on the table: click to switch it on and look at it.</div>`;
-    case 'floppy': return `<div class="t">Floppy: ${ud.name}</div><div class="k">Click to put it in the drive and load it</div>`;
+    case 'floppy': return `<div class="t">Floppy: ${ud.name}</div><div class="k">${FD.slot && FD.slot.key === ud.key ? 'In the slot: press LOAD to load it, or click to take it back' : 'Click to put it in the drive\'s slot, then press LOAD'}</div>`;
     case 'fdsave': return `<div class="t">SAVE</div><div class="k">Write the bench to a file</div>`;
-    case 'fdload': return `<div class="t">LOAD</div><div class="k">Read a saved bench file (or drop one on the page)</div>`;
+    case 'fdload': return FD.slot ? `<div class="t">LOAD: ${FD.slot.name}</div><div class="k">Replaces the bench with this example (Undo brings it back)</div>` : `<div class="t">LOAD</div><div class="k">Read a saved bench file (or drop one on the page). To load an example, put its floppy in the slot first.</div>`;
+    case 'printer': return `<div class="t">Printer</div><div class="k">Click to print a lab sheet: module layout, truth table, logic diagram and wiring list</div>`;
     case 'fdrive': return `<div class="t">Floppy drive</div><div class="k">Click to copy the bench as text, or paste one in</div>`;
     case 'tdiv': return `<div class="t">TIME / DIV: ${TDIVS[SC.div][1]}</div><div class="k">Click for a slower sweep, Shift+click for a faster one, or scroll</div>`;
     case 'trig': return `<div class="t">Trigger: ${SC.trig === 'a' ? 'rising edge of A' : 'roll'}</div><div class="k">Click to switch</div>`;
@@ -2327,7 +2327,7 @@ canvas.addEventListener('pointerdown', e => {
   if (ud && !wiring) {
     if (ud.kind === 'switch' || ud.kind === 'range' || ud.kind === 'mains' || ud.kind === 'probe' || ud.kind === 'bnc' || ud.kind === 'latch') { pressControl(ud); ptr.down = null; return; }
     if (ud.kind === 'rack') { startPlacing(ud.type, e); ptr.down = null; return; }
-    if (ud.kind === 'floppy' || ud.kind === 'fdsave' || ud.kind === 'fdload' || ud.kind === 'fdrive') { fdControl(ud); ptr.down = null; return; }
+    if (ud.kind === 'floppy' || ud.kind === 'fdsave' || ud.kind === 'fdload' || ud.kind === 'fdrive' || ud.kind === 'printer') { fdControl(ud); ptr.down = null; return; }
     if (ud.kind === 'tdiv' || ud.kind === 'trig' || ud.kind === 'scpower' || ud.kind === 'scscreen') { scopeControl(ud.kind, e); ptr.down = null; return; }
     if (ud.kind === 'pulse') { pressControl(ud); ptr.mode = 'pulse'; ptr.pulse = ud.i; }
     if (ud.kind === 'knob') { ptr.mode = 'knob'; ptr.cal0 = S.cal; }
@@ -2562,7 +2562,7 @@ $('#fileIn').onchange = e => { const f = e.target.files[0]; if (!f) return; cons
    ribbon cable, with the example floppies fanned out next to it. Click a floppy to load it: it slides into the drive.
    SAVE writes the bench to a file, LOAD reads one, and clicking the drive opens the copy/paste box.
    ================================================================ */
-const FD = { group: null, led: null, disks: [], anim: null, blink: 0 };
+const FD = { group: null, led: null, disks: [], slot: null, inDrive: null, blink: 0 };
 const DISKS = [['xor', 'XOR from four NANDs', 0x2c4f9a], ['cnt', 'Binary counter (2× 7476)', 0xa3342a], ['empty', 'Empty bench (photo layout)', 0x2a2a2c]];
 function buildFloppyDrive() {
   const g = new THREE.Group(); g.position.set(-51, -6.6, -30); g.rotation.y = 0.22; scene.add(g); FD.group = g;
@@ -2593,6 +2593,40 @@ function buildFloppyDrive() {
   });
   FD.led = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x1d3a1d, emissive: 0x30ff50, emissiveIntensity: 0 }));
   FD.led.position.set(-W / 2 + 1.3, 0.3 + Hd - 1.25, D / 2 + 0.05); g.add(FD.led);
+  // a tiny receipt-roll dot-matrix printer stands on its own feet on the back half of the drive (a separate device
+  // with its own cable to the case); click it to print a lab sheet
+  const pr = new THREE.Group(); pr.position.set(0, 0.3 + Hd + 0.25, -4); g.add(pr); FD.printer = pr;
+  const PW = 9, PH = 3, PD = 7, S3 = 48;
+  for (const [x, z] of [[-PW / 2 + 0.8, -PD / 2 + 0.8], [PW / 2 - 0.8, -PD / 2 + 0.8], [-PW / 2 + 0.8, PD / 2 - 0.8], [PW / 2 - 0.8, PD / 2 - 0.8]]) box(0.8, 0.25, 0.8, M.rubber, x, -0.125, z, pr);
+  const prTop = canvasTex(PW * S3, PD * S3, c => {
+    c.fillStyle = '#3c3f43'; c.fillRect(0, 0, PW * S3, PD * S3); noise(c, PW * S3, PD * S3, 1500, 0.05);
+    c.fillStyle = '#121214'; c.fillRect(1.4 * S3, 1.3 * S3, 6.2 * S3, 0.35 * S3);   // paper slot
+    c.fillStyle = '#c9c4b4'; c.font = `700 ${0.55 * S3}px "Barlow Condensed", Arial, sans-serif`; c.textBaseline = 'middle';
+    c.fillText('UNILOG  LP-1', 0.6 * S3, (PD - 0.9) * S3);
+    c.textAlign = 'right'; c.font = `500 ${0.42 * S3}px "Barlow Condensed", Arial, sans-serif`; c.fillText('PRINT', (PW - 2.5) * S3, (PD - 1.6) * S3);   // beside the button
+  });
+  const prShell = new THREE.MeshStandardMaterial({ color: 0x3c3f43, roughness: 0.55 });
+  const prBody = new THREE.Mesh(new THREE.BoxGeometry(PW, PH, PD), [prShell, prShell, new THREE.MeshStandardMaterial({ map: prTop, roughness: 0.55 }), prShell, prShell, prShell]);
+  prBody.position.y = PH / 2; prBody.castShadow = prBody.receiveShadow = true; pr.add(prBody);
+  addPick(prBody, { kind: 'printer' });
+  const prBtn = box(1.4, 0.35, 1.0, new THREE.MeshStandardMaterial({ color: 0x4f9a5d, roughness: 0.5 }), PW / 2 - 1.5, PH + 0.17, PD / 2 - 1.6, pr);
+  addPick(prBtn, { kind: 'printer' });
+  // the receipt: printed in dot-matrix style, it feeds up out of the slot and leans back
+  FD.rc = document.createElement('canvas'); FD.rc.width = 240; FD.rc.height = 480;
+  FD.rtex = new THREE.CanvasTexture(FD.rc); FD.rtex.encoding = THREE.sRGBEncoding; FD.rtex.anisotropy = MAX_ANISO;
+  const pgeo = new THREE.PlaneGeometry(5.8, 1); pgeo.translate(0, 0.5, 0);
+  FD.paper = new THREE.Mesh(pgeo, new THREE.MeshStandardMaterial({ map: FD.rtex, roughness: 0.9, side: THREE.DoubleSide }));
+  FD.paper.position.set(0, PH + 0.02, -PD / 2 + 1.5); FD.paper.rotation.x = -0.32; pr.add(FD.paper);
+  FD.paperLen = 1.2; receipt(null); paperLength(FD.paperLen);
+  g.updateMatrixWorld(true);
+  // the printer's own cable: out of its back, down behind the drive, and along the table to the case, plugged in
+  // next to the floppy ribbon
+  box(2.2, 1.4, 0.7, M.black, -21.5, -5.5, -23.2);
+  const pl = (x, y, z) => g.localToWorld(new THREE.Vector3(x, y, z));
+  const pc = [pl(3, 0.3 + Hd + 1.6, -4 - PD / 2 - 0.1), pl(3, 0.3 + Hd + 0.9, -10.3), pl(3, 0.25, -10.8), pl(3.5, 0.25, -12.5),
+    new THREE.Vector3(-38, -6.35, -40.3), new THREE.Vector3(-29, -6.35, -39), new THREE.Vector3(-23, -6.35, -31), new THREE.Vector3(-21.5, -6.3, -25.5), new THREE.Vector3(-21.5, -5.5, -23.6)];
+  const pcab = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pc), 120, 0.25, 8), new THREE.MeshStandardMaterial({ color: 0x5b5d60, roughness: 0.6 }));
+  pcab.castShadow = true; scene.add(pcab);
   g.updateMatrixWorld(true);
   // ribbon cable: out of the back of the drive, along the table behind the case, into a connector on its back
   box(3.4, 1.4, 0.7, M.black, -26, -5.5, -23.2);   // connector on the back of the case
@@ -2644,24 +2678,78 @@ function ribbonMesh(curve, width, mat) {
   geo.setIndex(idx); geo.computeVertexNormals();
   const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; scene.add(m); return m;
 }
+// the receipt texture: a short dot-matrix printout, or blank paper before anything has been printed
+const RECEIPT_MAX = 9;   // cm of paper the printer feeds out for one job
+function receipt(o) {
+  const c = FD.rc.getContext('2d'), W = FD.rc.width, H = FD.rc.height;
+  c.fillStyle = '#f4f1e6'; c.fillRect(0, 0, W, H);
+  if (o) {
+    const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const lines = ['UNILOG-2  LAB SHEET', '------------------', (o.title || 'UNILOG-2 circuit').slice(0, 18).toUpperCase(), date,
+      `${modules.length} MODULES`, `${wires.length} CABLES`, '------------------', o.case ? '[X] MODULE LAYOUT' : '[ ] MODULE LAYOUT', o.tt ? '[X] TRUTH TABLE' : '[ ] TRUTH TABLE',
+      o.diag ? '[X] LOGIC DIAGRAM' : '[ ] LOGIC DIAGRAM', o.wire ? '[X] WIRING LIST' : '[ ] WIRING LIST', '------------------', '  SENT TO PRINTER'];
+    c.fillStyle = '#2a2a33'; c.font = '600 17px "IBM Plex Mono", monospace'; c.textBaseline = 'top';
+    lines.forEach((l, i) => c.fillText(l, 14, 16 + i * 26));
+    // break the strokes into dots, the way a 9-pin head prints
+    c.fillStyle = '#f4f1e6'; for (let y = 16; y < 16 + lines.length * 26; y += 3) c.fillRect(0, y, W, 1);
+  }
+  FD.rtex.needsUpdate = true; invalidate();
+}
+// the paper shows from the slot up; the printout starts at its top edge
+function paperLength(L) {
+  FD.paper.scale.y = L; FD.rtex.repeat.set(1, L / RECEIPT_MAX); FD.rtex.offset.set(0, 1 - L / RECEIPT_MAX);
+}
+function printFeed(o) { receipt(o); FD.feed = { t: 0 }; }
 buildFloppyDrive();
 function fdBlink(sec) { FD.blink = Math.max(FD.blink, sec); }
-// click a floppy: it slides into the drive, the drive reads it, and it goes back where it was
-function insertFloppy(disk) {
-  if (FD.anim) return;
-  const g = FD.group, q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, g.rotation.y, 0));
-  FD.anim = { disk, t: 0, p0: disk.group.position.clone(), q0: disk.group.quaternion.clone(), q1: q,
-    p1: g.localToWorld(new THREE.Vector3(0.1, 2.2, 9.5 + 6)), p2: g.localToWorld(new THREE.Vector3(0.1, 2.2, 9.5 - 3)), loaded: false };
+// Loading an example replaces the bench, so it takes two steps: clicking a floppy puts it in the drive's slot,
+// half in, and only LOAD pushes it home and reads it. Clicking the floppy in the slot takes it back to the pile.
+// FD.slot: the floppy sitting in the slot; FD.inDrive: the one pushed all the way in (read last).
+function fdPose(z) {   // a point in front of / in the slot, and the drive's turn, for a floppy lying flat
+  return { p: FD.group.localToWorld(new THREE.Vector3(0.1, 2.2, z)), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, FD.group.rotation.y, 0)) };
+}
+const FD_FRONT = 15.5, FD_SLOT = 12.5, FD_IN = 6.5;   // floppy centre, in the drive's z: in front of the slot, half in, all the way in
+const homePose = d => ({ p: d.home.pos, q: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.home.rot, 0)) });
+// moves a floppy through a list of poses, one segment after another
+function tween(d, segs, done) {
+  d.group.visible = true;
+  d.tw = { segs, i: 0, t: 0, p0: d.group.position.clone(), q0: d.group.quaternion.clone(), done };
+}
+function backToPile(d, fromInside) {
+  tween(d, [...(fromInside ? [{ ...fdPose(FD_FRONT), dur: 0.35 }] : [{ ...fdPose(FD_FRONT), dur: 0.25 }]), { ...homePose(d), dur: 0.5 }]);
+}
+function pickFloppy(d) {
+  if (d.tw) return;
+  if (FD.slot === d) { FD.slot = null; backToPile(d); return; }
+  if (FD.slot) backToPile(FD.slot);
+  if (FD.inDrive) { const o = FD.inDrive; FD.inDrive = null; o.group.position.copy(fdPose(FD_IN).p); backToPile(o, true); fdBlink(0.3); }
+  FD.slot = d;
+  tween(d, [{ ...fdPose(FD_FRONT), dur: 0.55 }, { ...fdPose(FD_SLOT), dur: 0.25 }]);
+  toast(`"${d.name}" is in the drive. Press LOAD to load it: it replaces the bench (Undo brings it back).`);
+}
+function loadSlot() {
+  const d = FD.slot; if (!d) return;
+  FD.slot = null;
+  const push = { ...fdPose(FD_IN), dur: 0.3 }, read = () => { d.group.visible = false; FD.inDrive = d; fdBlink(0.9); loadExample(d.key); };
+  // LOAD pressed while the floppy is still on its way to the slot: it carries on in once it gets there
+  if (d.tw) { d.tw.segs.push(push); d.tw.done = read; } else tween(d, [push], read);
 }
 function stepFloppy(dt) {
   if (FD.blink > 0) { FD.blink -= dt; const on = FD.blink > 0 && (performance.now() / 90 | 0) % 2 === 0; FD.led.material.emissiveIntensity = on ? 2.2 : 0; invalidate(); }
-  const a = FD.anim; if (!a) return;
-  a.t += dt; const fl = a.disk.group, ease = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
-  if (a.t < 0.55) { const e = ease(a.t / 0.55); fl.position.lerpVectors(a.p0, a.p1, e); fl.quaternion.slerpQuaternions(a.q0, a.q1, e); }
-  else if (a.t < 0.85) fl.position.lerpVectors(a.p1, a.p2, ease((a.t - 0.55) / 0.3));
-  else if (!a.loaded) { a.loaded = true; fl.visible = false; fdBlink(0.9); loadExample(a.disk.key); }
-  else if (a.t > 1.9) { fl.visible = true; fl.position.copy(a.disk.home.pos); fl.rotation.set(0, a.disk.home.rot, 0); FD.anim = null; }
-  invalidate(true);
+  if (FD.feed) {   // the receipt feeds out line by line
+    FD.feed.t += dt; FD.paperLen = Math.min(RECEIPT_MAX, 1.2 + FD.feed.t * 8); paperLength(FD.paperLen);
+    if (FD.paperLen >= RECEIPT_MAX) FD.feed = null;
+    fdBlink(0.2); invalidate(true);
+  }
+  const ease = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  for (const d of FD.disks) {
+    const w = d.tw; if (!w) continue;
+    const sg = w.segs[w.i]; w.t += dt;
+    const e = ease(Math.min(1, w.t / sg.dur));
+    d.group.position.lerpVectors(w.p0, sg.p, e); d.group.quaternion.slerpQuaternions(w.q0, sg.q, e);
+    if (w.t >= sg.dur) { w.p0 = sg.p.clone(); w.q0 = sg.q.clone(); w.i++; w.t = 0; if (w.i === w.segs.length) { d.tw = null; if (w.done) w.done(); } }
+    invalidate(true);
+  }
 }
 function fdSave() {
   const url = URL.createObjectURL(new Blob([JSON.stringify(exportBench())], { type: 'application/json' }));
@@ -2670,9 +2758,10 @@ function fdSave() {
   fdBlink(0.8); toast('Bench saved to unilog2-bench.json. Press LOAD (or drop the file on the page) to read it back.');
 }
 function fdControl(ud) {
-  if (ud.kind === 'floppy') insertFloppy(FD.disks.find(d => d.key === ud.key));
+  if (ud.kind === 'floppy') pickFloppy(FD.disks.find(d => d.key === ud.key));
   else if (ud.kind === 'fdsave') fdSave();
-  else if (ud.kind === 'fdload') { fdBlink(0.4); $('#fileIn').click(); }
+  else if (ud.kind === 'fdload') { if (FD.slot) loadSlot(); else { fdBlink(0.4); $('#fileIn').click(); } }
+  else if (ud.kind === 'printer') openPrint();
   else if (ud.kind === 'fdrive') { $('#saveTxt').value = JSON.stringify(exportBench()); $('#mSave').hidden = false; }
 }
 document.querySelectorAll('.modal').forEach(m => { m.addEventListener('click', e => { if (e.target === m || e.target.hasAttribute('data-close')) m.hidden = true; }); });
@@ -4407,19 +4496,21 @@ function fitSheet() {
   pv.classList.remove('measuring');
   return { zoom: z, fits };
 }
-$('#bPrint').onclick = () => {
+function openPrint() {
   if (!wires.length) { toast('Nothing is wired yet, so there is nothing to print.'); return; }
   $('#prTitle').value = benchTitle || (D.nodes.length && dzLive() ? 'Circuit from the designer' : 'UNILOG-2 circuit');
   $('#mPrint').hidden = false;
-};
+}
 $('#prGo').onclick = () => {
   const o = { title: $('#prTitle').value.trim(), case: $('#prCase').checked, tt: $('#prTT').checked, diag: $('#prDiag').checked, wire: $('#prWire').checked, diagSrc: $('#prDiagSrc').value };
   $('#printView').innerHTML = buildPrintSheet(o);
   const fit = fitSheet();
   if (!fit.fits) toast('This circuit has a lot of cables, so even at the smallest readable size the sheet runs onto a second page.');
   $('#mPrint').hidden = true;
-  // render the open logic view again so it isn't left showing the print copy
-  setTimeout(() => { window.print(); if (LV.open) { LV.dirty = true; if (LV.dz) dzRender(); } }, 50);
+  // the receipt printer on the drive feeds out its slip first, then the sheet goes to the real printer.
+  // The open logic view is rendered again afterwards so it isn't left showing the print copy.
+  printFeed(o);
+  setTimeout(() => { window.print(); if (LV.open) { LV.dirty = true; if (LV.dz) dzRender(); } }, 1200);
 };
 window.addEventListener('afterprint', () => { $('#printView').innerHTML = ''; });
 
