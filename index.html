@@ -61,10 +61,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .dip b{color:var(--accent);font-weight:500;min-width:18px}
 .dip .out{color:#ffb4a8}.dip .pwr{color:var(--muted)}
 .ov{text-decoration:overline}
-.swatches{display:flex;gap:6px;flex-wrap:wrap}
-.sw{width:22px;height:22px;border-radius:50%;border:2px solid #0006;padding:0;cursor:pointer}
-.sw[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
-.sw.auto{background:conic-gradient(#c8241f,#e8701a,#e6c619,#2c9a3d,#2147b8,#7a3fb5,#c8241f)}
 
 #dock{left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;padding:8px 12px;flex-wrap:wrap;right:auto;max-width:calc(100% - 24px)}
 #dock .lbl{font-family:var(--f-display);letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--muted)}
@@ -360,6 +356,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>Drag a cable end off its pin to move it. Release it on empty space to unplug it.</li>
       <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in the inspector.</li>
       <li><kbd>Esc</kbd> cancels a cable you're placing.</li>
+      <li>The dupont cables lying along the front edge of the panel set the colour of new cables: click one to use its colour, or the rainbow jumpers for a different colour every time. With a cable selected, clicking one also recolours that cable.</li>
     </ul>
     <h3>Modules</h3>
     <ul>
@@ -444,8 +441,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 </section>
 
 <div id="dock" class="float">
-  <span class="lbl">Wire</span>
-  <div class="swatches" id="swatches"></div>
   <span class="lbl">View</span>
   <button id="vBench">Bench</button>
   <button id="vTop">Top</button>
@@ -2007,19 +2002,49 @@ function buildRack() {
 }
 buildRack();
 let wireColor = null, colorCycle = 0;
-function buildSwatches() {
-  const wrap = $('#swatches');
-  const mk = (label, cls, style, val) => {
-    const b = document.createElement('button'); b.className = 'sw ' + cls; b.title = label; b.setAttribute('aria-label', label + ' wire');
-    if (style) b.style.background = style;
-    b.setAttribute('aria-pressed', String(val === wireColor));
-    b.onclick = () => { wireColor = val; [...wrap.children].forEach(c => c.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); if (selected && selected.w) { pushUndo(); selected.w.color = val == null ? selected.w.color : val; selected.w.mat.color.setHex(selected.w.color); selected.w.glow = ''; save(); } };
-    wrap.appendChild(b);
-  };
-  mk('Mixed colours', 'auto', null, null);
-  for (const [n, c] of WIRE_COLORS) mk(n, '', '#' + c.toString(16).padStart(6, '0'), c);
+// Cable colours: a bundle of dupont jumpers lies on the front of the panel, between the left latch and the handle,
+// running off over the rim (they fade out as they bend over it, like the scope's cables). Click one to use its colour for new cables (and for the selected cable). The rainbow ribbon at the left
+// end stands for mixed colours: every new cable takes the next colour in turn.
+const JUMPERS = [];
+function buildJumpers() {
+  const x0 = -18.5, dx = 0.62, housing = new THREE.BoxGeometry(0.3, 0.3, 1.1);
+  const fade = canvasTex(256, 4, c => { const gr = c.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.3, '#fff'); gr.addColorStop(1, '#000'); c.fillStyle = gr; c.fillRect(0, 0, 256, 4); });
+  fade.encoding = THREE.LinearEncoding;
+  const drape = (x, j, r) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+    new THREE.Vector3(x, PANEL_TOP + r, 20.9), new THREE.Vector3(x, PANEL_TOP + r, 22.3), new THREE.Vector3(x + j * 0.3, 0.7 + r, 24.0),
+    new THREE.Vector3(x + j * 0.5, 0.35, 25.0)]), 24, r, 6);
+  const items = [[null, 'Mixed colours'], ...WIRE_COLORS.map(([n, c]) => [c, n])];
+  items.forEach(([col, name], i) => {
+    const g = new THREE.Group(); scene.add(g);
+    const x = x0 + i * dx + (i ? 0.3 : 0), j = Math.sin(i * 2.3) * 0.25;   // a little sway, so they don't lie ruler-straight
+    const mats = [];
+    const strand = (c, xx, r) => {
+      const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.5, alphaMap: fade, transparent: true, depthWrite: false }); mats.push(m);
+      const t = new THREE.Mesh(drape(xx, j, r), m); t.castShadow = true; g.add(t); addPick(t, { kind: 'jumper', col, name });
+    };
+    if (col == null) [0xc8241f, 0xe6c619, 0x2c9a3d, 0x2147b8, 0x7a3fb5].forEach((c, k) => strand(c, x - 0.3 + k * 0.15, 0.075));   // rainbow ribbon
+    else strand(col, x, 0.12);
+    // the dupont housing at the near end
+    const inEnd = new THREE.Mesh(col == null ? new THREE.BoxGeometry(0.8, 0.3, 1.1) : housing, M.black); inEnd.position.set(x, PANEL_TOP + 0.15, 20.4); g.add(inEnd);
+    addPick(inEnd, { kind: 'jumper', col, name });
+    JUMPERS.push({ col, g, mats });
+  });
+  showJumper();
 }
-buildSwatches();
+// the chosen jumper is lifted a little off the panel and pulled out past the others' housings, and glows faintly
+function showJumper() {
+  for (const jp of JUMPERS) {
+    const on = jp.col === wireColor;
+    jp.g.position.set(0, on ? 0.3 : 0, on ? -1.3 : 0);
+    jp.mats.forEach(m => m.emissive.setHex(on ? 0x3a3222 : 0));
+  }
+  invalidate(true);
+}
+function pickJumper(col) {
+  wireColor = col; showJumper();
+  if (selected && selected.w && col != null) { pushUndo(); selected.w.color = col; selected.w.mat.color.setHex(col); selected.w.glow = ''; save(); }
+}
+buildJumpers();
 const nextColor = () => wireColor != null ? wireColor : WIRE_COLORS[colorCycle++ % WIRE_COLORS.length][1];
 
 let selected = null;
@@ -2297,6 +2322,7 @@ function controlTip(ud) {
     case 'mains': return `<div class="t">MAINS ${S.mains ? 'ON' : 'OFF'}</div><div class="k">Click to switch the case ${S.mains ? 'off' : 'on'}</div>`;
     case 'probe': return `<div class="t">Probe socket</div><div class="k">Hover any pin to read its level</div>`;
     case 'bnc': return `<div class="t">Oscilloscope input ${ud.ch}</div><div class="k">Wire a signal to the pin beside it. It is cabled to the scope on the table: click to switch it on and look at it.</div>`;
+    case 'jumper': return `<div class="t">${ud.col == null ? 'Rainbow jumpers: mixed colours' : ud.name + ' dupont cable'}</div><div class="k">${ud.col === wireColor ? 'In use for new cables' : 'Click to use ' + (ud.col == null ? 'a different colour for every new cable' : 'this colour for new cables') + (selected && selected.w && ud.col != null ? ' (and for the selected cable)' : '')}</div>`;
     case 'floppy': return `<div class="t">Floppy: ${ud.name}</div><div class="k">${FD.slot && FD.slot.key === ud.key ? 'In the slot: press LOAD to load it, or click to take it back' : 'Click to put it in the drive\'s slot, then press LOAD'}</div>`;
     case 'fdsave': return `<div class="t">SAVE</div><div class="k">Write the bench to a file</div>`;
     case 'fdload': return FD.slot ? `<div class="t">LOAD: ${FD.slot.name}</div><div class="k">Replaces the bench with this example (Undo brings it back)</div>` : `<div class="t">LOAD</div><div class="k">Read a saved bench file (or drop one on the page). To load an example, put its floppy in the slot first.</div>`;
@@ -2327,6 +2353,7 @@ canvas.addEventListener('pointerdown', e => {
   if (ud && !wiring) {
     if (ud.kind === 'switch' || ud.kind === 'range' || ud.kind === 'mains' || ud.kind === 'probe' || ud.kind === 'bnc' || ud.kind === 'latch') { pressControl(ud); ptr.down = null; return; }
     if (ud.kind === 'rack') { startPlacing(ud.type, e); ptr.down = null; return; }
+    if (ud.kind === 'jumper') { pickJumper(ud.col); ptr.down = null; return; }
     if (ud.kind === 'floppy' || ud.kind === 'fdsave' || ud.kind === 'fdload' || ud.kind === 'fdrive' || ud.kind === 'printer') { fdControl(ud); ptr.down = null; return; }
     if (ud.kind === 'tdiv' || ud.kind === 'trig' || ud.kind === 'scpower' || ud.kind === 'scscreen') { scopeControl(ud.kind, e); ptr.down = null; return; }
     if (ud.kind === 'pulse') { pressControl(ud); ptr.mode = 'pulse'; ptr.pulse = ud.i; }
