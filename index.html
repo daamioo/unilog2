@@ -98,7 +98,8 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
    They sit under the WebGL canvas, which leaves a transparent hole where each paper is visible. */
 #stage canvas{position:relative;z-index:1}
 #papers{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-.paper{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;display:flex;flex-direction:column;overflow:hidden;
+/* hidden until the script has placed it on its 3D quad, so the pages don't flash up flat while the page loads */
+.paper{visibility:hidden;position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;display:flex;flex-direction:column;overflow:hidden;
   --panel:#efebe0;--panel-2:#e5e0d1;--line:#bdb6a3;--fg:#1d1b17;--muted:#6b665b;--accent:#9c6512;--accent-ink:#fff8e8;--hi:#cf3426;--lo:#2f7d4c;--float:#53709e;--warn:#b87300;
   --lv-bg:transparent;--lv-body:#fbf9f3;--lv-ink:#26231d;--lv-lo:#2f7d4c;--lv-off:#8a857a;
   color-scheme:light;background:#efebe0;color:var(--fg);font-size:14px;user-select:none}
@@ -4620,7 +4621,7 @@ function updatePapers() {
     if (m && !m.every(Number.isFinite)) m = null;
     sh.m = m; sh.inv = m && inv3(m);
     mesh.material = m ? PUNCH : PAPER_BLANK;
-    sh.el.style.visibility = m ? '' : 'hidden';
+    sh.el.style.visibility = m ? 'visible' : 'hidden';
     if (m) sh.el.style.transform = `matrix3d(${m[0] / sh.W},${m[3] / sh.W},0,${m[6] / sh.W},${m[1] / sh.H},${m[4] / sh.H},0,${m[7] / sh.H},0,0,1,0,${m[2]},${m[5]},0,1)`;
     sh.el.classList.toggle('reading', !!m && readingSheet(k));
   }
