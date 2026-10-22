@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, drawer left, inspector right, scope bottom-right). */
+/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, inspector right, scope bottom-right); the module rack is on the table in 3D. */
 :root{
   --bg:#141619; --panel:#1c1f23; --panel-2:#252930; --line:#343a42; --fg:#e7e4da; --muted:#9b9d97;
   --accent:#d3a24a; --accent-ink:#1b1408; --hi:#ff4d3d; --lo:#37c96a; --float:#8fa3c4; --warn:#ffb020;
@@ -50,18 +50,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .pill.fault i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
 
 .float{position:fixed;z-index:4;background:rgba(28,31,35,.94);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-#drawer{left:max(12px,env(safe-area-inset-left,0px));top:64px;bottom:72px;width:236px;display:flex;flex-direction:column;overflow:hidden}
-#drawer h2,.float h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0}
-#drawer header{padding:12px 14px 6px}
-#drawer .hint{color:var(--muted);font-size:12.5px;margin:4px 0 0;line-height:1.35}
-#lib{overflow:auto;padding:4px 10px 12px;display:flex;flex-direction:column;gap:10px}
-.grp{display:flex;flex-direction:column;gap:5px}
-.grp h3{font-family:var(--f-display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:6px 4px 0;font-weight:600}
-.chip{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;text-align:left;padding:7px 9px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line);cursor:grab;user-select:none;touch-action:pan-y}
-.chip:active{cursor:grabbing}
-.chip .n{font-family:var(--f-mono);font-weight:600;font-size:15px;color:#efe6c4;grid-row:span 2;min-width:52px}
-.chip .d{font-size:12.5px;line-height:1.2}
-.chip .p{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.float h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0}
 
 #info{right:max(12px,env(safe-area-inset-right,0px));top:64px;width:300px;max-height:calc(100% - 150px);overflow:auto;padding:14px}
 #info .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
@@ -114,11 +103,46 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 #settings .qrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #settings .perf{color:var(--muted);font-family:var(--f-mono);font-size:11.5px}
 
-/* Logic view: docked on the right, the 3D bench recentres in the space that's left */
-:root{--lv-w:min(52vw,1000px);--lv-bg:#111417;--lv-body:#1f2329;--lv-ink:#d9d4c3;--lv-lo:#3f9a63;--lv-off:#4a4f56}
-#logic{right:max(12px,env(safe-area-inset-right,0px));top:64px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:var(--lv-w);display:flex;flex-direction:column;overflow:hidden;z-index:6}
-#logic > header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-#logic > header .grow{flex:1}
+/* Papers: the lid sheets and the help pamphlet are DOM pinned onto their 3D quads (see PAPERS in the script).
+   They sit under the WebGL canvas, which leaves a transparent hole where each paper is visible. */
+#stage canvas{position:relative;z-index:1}
+#papers{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.paper{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:auto;display:flex;flex-direction:column;overflow:hidden;
+  --panel:#efebe0;--panel-2:#e5e0d1;--line:#bdb6a3;--fg:#1d1b17;--muted:#6b665b;--accent:#9c6512;--accent-ink:#fff8e8;--hi:#cf3426;--lo:#2f7d4c;--float:#53709e;--warn:#b87300;
+  --lv-bg:transparent;--lv-body:#fbf9f3;--lv-ink:#26231d;--lv-lo:#2f7d4c;--lv-off:#8a857a;
+  color-scheme:light;background:#efebe0;color:var(--fg);font-size:14px;user-select:none}
+.paper.lid{padding-bottom:120px}   /* the bottom 3 cm sits inside the pocket */
+.paper .ph{display:flex;align-items:baseline;gap:12px;margin:0 22px;padding:16px 0 6px;border-bottom:2.5px solid var(--fg);cursor:zoom-in}
+.paper.reading .ph{cursor:zoom-out}
+.ph-t{font:700 28px var(--f-display);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph-k{font:700 13px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ph-d{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap}
+.paper button{background:var(--panel-2);border-color:var(--line)}
+.paper button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.paper select,.paper input[type=text]{background:#f8f5ec;border:1px solid var(--line);color:var(--fg)}
+.paper .dz-bar,.paper .dz-foot,.paper .lv-foot,.paper .tt-expr{border-color:var(--line)}
+.paper .lv-p{fill:#3a3730}.paper .lv-s{fill:#6b665b}
+.paper .lv-led{fill:#f6f1e6;stroke:var(--lv-ink)}.paper .lv-led[data-s="H"]{fill:var(--hi);filter:none}
+.paper .lv-seg{fill:#e2dccd}.paper .lv-seg.on{fill:var(--hi)}
+.paper .dz-port{fill:#4a463d;stroke:#efebe0}.paper .dz-w{stroke:#57534a}.paper .dz-hex{fill:var(--hi)}
+.paper #dzReport p,.paper #dzReport ol,.paper .tt-expr{color:#2a2722}
+.paper #dzMsg.bad,.paper #ttMsg.bad{color:#b02a1f}
+.paper #ttTable th,.paper #ttTable td{border-bottom-color:#d3ccba}
+.paper #ttTable th{background:#efebe0}
+.paper #ttTable .in{color:#4a463d}
+.paper #ttTable td button{color:#8a857a}
+.paper #ttTable td button.v1{background:rgba(207,52,38,.12);color:#b02a1f;border-color:rgba(207,52,38,.35)}
+#pDiag .stage,#pTT .tt-wrap{margin:0 10px}
+/* help pamphlet: the text flows into page-sized columns, one shown at a time */
+#pHelp{font-size:13.5px}
+.hp-body{flex:1;min-height:0;overflow:hidden;margin:10px 26px 0}
+.hp-cols{height:100%;column-fill:auto;column-gap:52px}
+.hp-cols h2{font:700 22px var(--f-display);letter-spacing:.06em;margin:0 0 4px}
+.hp-cols h3{font:700 13px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:12px 0 4px;break-after:avoid}
+.hp-cols p,.hp-cols li{line-height:1.45;margin:3px 0}
+.hp-cols ul{padding-left:18px;margin:2px 0}
+.hp-cols kbd{font-family:var(--f-mono);font-size:11.5px;background:#e5e0d1;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.hp-nav{display:flex;align-items:center;justify-content:space-between;margin:0 22px;padding:10px 0 16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 .segm{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .segm button{border:0;border-radius:0;background:var(--panel)}
 .segm button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -165,13 +189,10 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .tt-expr .nt{color:var(--muted);font-family:var(--f-body)}
 #ttMsg{font-size:12.5px;color:var(--muted);flex-basis:100%}
 #ttMsg.bad{color:#ffb4a8}
-#lvSvg{flex:1;min-height:0;width:100%;display:block;background:var(--lv-bg);cursor:grab;touch-action:none;user-select:none}
-#lvSvg.panning{cursor:grabbing}
-#logic .lv-foot{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
-#logic .lv-foot i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+#lvSvg{flex:1;min-height:0;width:100%;display:block;background:var(--lv-bg);touch-action:none;user-select:none}
+.lv-foot{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.lv-foot i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
 #lvEmpty{position:absolute;inset:120px 24px auto;text-align:center;color:var(--muted);line-height:1.5;pointer-events:none}
-body.lv-open #info,body.lv-open #settings,body.lv-open #scope{right:calc(var(--lv-w) + 24px)}
-body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
 .lv-w{fill:none;stroke:var(--lv-off);stroke-width:2;stroke-linecap:round}
 .lv-w[data-s="H"]{stroke:var(--hi)}
 .lv-w[data-s="L"]{stroke:var(--lv-lo)}
@@ -194,9 +215,6 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
 @keyframes lvblink{50%{stroke:transparent}}
 @media (prefers-reduced-motion:reduce){.lv-w[data-s="X"]{animation:none}}
 @media (max-width:760px){
-  #logic{left:12px;width:auto;top:96px}
-  body.lv-open #info,body.lv-open #settings,body.lv-open #scope{right:12px}
-  #drawer{top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));height:46%;width:calc(100% - 24px)}
   #info,#settings{left:12px;right:12px;width:auto;top:auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));max-height:45%}
   .brand .sub{display:none}
   .pill{margin-left:0}
@@ -263,12 +281,142 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
 </head>
 <body>
 
-<div id="stage"></div>
+<div id="stage"><div id="papers">
+<div class="paper lid" id="pDiag" aria-label="Logic diagram sheet in the lid">
+  <header class="ph"><b class="ph-t">UNILOG-2 circuit</b><span class="ph-k">Logic diagram</span><span class="ph-d"></span></header>
+  <div id="lvPane" class="pane">
+    <div class="stage">
+      <svg id="lvSvg" xmlns="http://www.w3.org/2000/svg"><g id="lvRoot"></g></svg>
+      <p id="lvEmpty" hidden>No logic is wired yet, only power. Run a cable to a switch, gate or LED and the circuit is drawn here, with every wire showing its live level.</p>
+    </div>
+    <footer class="lv-foot">
+      <span><i style="background:var(--hi)"></i>HIGH</span>
+      <span><i style="background:var(--lv-lo)"></i>LOW</span>
+      <span><i style="background:repeating-linear-gradient(90deg,var(--float) 0 5px,transparent 5px 9px)"></i>floating</span>
+      <span><i style="background:var(--warn)"></i>conflict</span>
+      <span>Click a switch or pulse to operate it · click a gate to find it on the bench · click the blank page to read it up close</span>
+      <button id="lvToDz" title="Draw a circuit with ideal gates and build it on the bench">Open the designer</button>
+    </footer>
+  </div>
+  <div id="dzPane" class="pane" hidden>
+    <div class="dz-bar" id="dzPalette">
+      <span class="lbl">In</span>
+      <button data-add="sw">Switch</button><button data-add="pulse">Pulse</button><button data-add="clk">Clock</button><button data-add="one">1</button><button data-add="zero">0</button>
+      <span class="lbl">Gates</span>
+      <button data-add="and">AND</button><button data-add="or">OR</button><button data-add="nand">NAND</button><button data-add="nor">NOR</button><button data-add="xor">XOR</button><button data-add="xnor">XNOR</button><button data-add="not">NOT</button>
+      <span class="lbl">Out</span>
+      <button data-add="led">LED</button><button data-add="hex">Hex display</button>
+    </div>
+    <div class="dz-bar dz-sel" id="dzSel"></div>
+    <div class="stage">
+      <svg id="dzSvg" xmlns="http://www.w3.org/2000/svg"><g id="dzRoot"></g></svg>
+      <p id="dzEmpty" class="lv-emptyish" style="position:absolute;inset:90px 24px auto;text-align:center;color:var(--muted);line-height:1.5">Nothing is wired yet. Wire the case by hand and the circuit is drawn here, or draw it with ideal gates and press <b>Build on bench</b>. The solver picks modules, places them in the case and runs every dupont cable.<br><button id="dzEx" style="margin-top:12px">Load example: half adder</button></p>
+    </div>
+    <div class="dz-foot">
+      <button id="dzBuild" class="primary">Build on bench</button>
+      <label><input type="checkbox" id="dzPrefer" checked> Prefer chips already in the case</label>
+      <label><input type="checkbox" id="dzOpt" checked> Optimize placement and cable runs</label>
+      <button id="dzUndo">Undo</button>
+      <button id="dzClear">Clear design</button>
+      <button id="dzFitB" title="Fit the whole design on the sheet">Fit</button>
+      <button id="dzToLv" hidden title="The bench was wired by hand or changed since the last build">Show the wired circuit</button>
+      <span id="dzMsg"></span>
+    </div>
+    <details id="dzReport" hidden><summary>Build report and wiring list</summary><div id="dzSum"></div><ol id="dzList"></ol></details>
+  </div>
+</div>
+<div class="paper lid" id="pTT" aria-label="Truth table sheet in the lid">
+  <header class="ph"><b class="ph-t">UNILOG-2 circuit</b><span class="ph-k">Truth table</span><span class="ph-d"></span></header>
+  <div id="ttPane" class="pane">
+    <div class="dz-bar">
+      <span class="lbl">Fill from</span>
+      <button id="ttFromDesign" title="Work out the table from the gate design">Design</button>
+      <button id="ttFromBench" title="Measure the bench: steps through every combination of the wired switches and pulses and reads the LEDs">Bench</button>
+      <span class="lbl">New table</span>
+      <label>Inputs <select id="ttN"></select></label>
+      <label>Outputs <select id="ttM"></select></label>
+      <button id="ttZero">Clear outputs</button>
+    </div>
+    <div class="tt-wrap"><table id="ttTable"></table></div>
+    <div id="ttExpr" class="tt-expr"></div>
+    <div class="dz-foot">
+      <label>Style <select id="ttStyle">
+        <option value="smart" selected>Smart: like a person would (XOR tricks, shared logic)</option>
+        <option value="sop">AND–OR (sum of products)</option>
+        <option value="nand">NAND–NAND</option>
+        <option value="pos">OR–AND (product of sums)</option>
+        <option value="nor">NOR–NOR</option>
+      </select></label>
+      <button id="ttMake" class="primary">Create design</button>
+      <label><input type="checkbox" id="ttBuild"> and build it on the bench</label>
+      <button id="ttCopy">Copy table</button>
+      <span id="ttMsg"></span>
+    </div>
+  </div>
+</div>
+<div class="paper" id="pHelp" aria-label="Help pamphlet">
+  <header class="ph"><b class="ph-t">UNILOG-2</b><span class="ph-k">Bench guide</span></header>
+  <div class="hp-body"><div class="hp-cols"><h2>Working the UNILOG-2 bench</h2>
+    <p style="color:var(--muted);margin-top:-2px">UNILOG-2 simulator by <b style="color:var(--accent)">daamioo</b></p>
+    <p>The case works like the one in the lab. Modules sit in 12 slots. A module works only once it has power: cable its +5V (VCC) and 0V (GND) pins to the rail. Until then its outputs are dead. <b>Wire power</b> in the inspector does it for you, and the design builder cables power for every module it uses. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
+    <h3>Wiring</h3>
+    <ul>
+      <li>Click a pin, then click another pin to run a cable. Dragging from pin to pin also works.</li>
+      <li>Drag a cable end off its pin to move it. Release it on empty space to unplug it.</li>
+      <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in the inspector.</li>
+      <li><kbd>Esc</kbd> cancels a cable you're placing.</li>
+    </ul>
+    <h3>Modules</h3>
+    <ul>
+      <li>Drag a board from the module rack (on the table left of the case) onto a slot, or click it to drop it in the first free slot. On an empty slot it goes in. On a module with no cables it replaces that module. A module with cables on it stays put: unplug them first.</li>
+      <li>Drag a module that's already in the case to move it. Dropping it on another module swaps the two, and the cables go with them. Drop it outside the case to put it back on the rack.</li>
+      <li>Click a module to see its pinout and whether it is powered. <kbd>R</kbd> turns it 180°.</li>
+      <li>The <b>splitter</b> board (at the end of the rack) has 14 rows of 4 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
+    </ul>
+    <h3>Panel</h3>
+    <ul>
+      <li><b>Rail</b> between the rows: <kbd>0V</kbd>, <kbd>H</kbd> and <kbd>+5V</kbd>, once per column. The UNILOG-2 manual calls the H pins "constant logic levels": they give a logic 1 for inputs that must stay HIGH. In the simulator the three H pins of a column are one point, so they also work as a junction: plug an output in, and the other two H pins carry that output (it overrides the logic 1). Wiring +5V straight to 0V trips the supply.</li>
+      <li><b>Switch register</b>: 8 latching buttons, each with Q and Q̄ outputs. Keys <kbd>1</kbd>–<kbd>8</kbd> toggle them too.</li>
+      <li><b>Pulse</b>: 3 momentary buttons with ⊓ (HIGH while held) and ⊔ (LOW while held) outputs.</li>
+      <li><b>Clock</b>: pick 1 Hz, 1 kHz or 1 MHz. CAL trims the rate (drag it or use the scroll wheel). 1 MHz runs in slow motion so the simulation can keep up.</li>
+      <li><b>Display</b>: segment inputs a–g and DP are active-high. If any of the 2⁰–2³ inputs is wired, the built-in decoder shows that hex digit.</li>
+      <li><b>Oscilloscope</b>: wire a signal to the A or B pin next to the BNC sockets, then open the scope window.</li>
+    </ul>
+    <h3>The sheets in the lid</h3>
+    <ul>
+      <li>Two A4 sheets are tucked into the pocket inside the lid: the logic diagram on the left and the truth table on the right. They are the real tools, not printouts: everything on them can be clicked. Click the blank part of a sheet to read it up close, and click its heading (or press <kbd>Esc</kbd> or <b>Bench</b>) to step back. <b>Logic view</b> or <kbd>L</kbd> goes straight to the diagram.</li>
+      <li>The diagram sheet shows the designer while the case is empty (or while the bench is the one built from your design), and the wired circuit once you wire it by hand. <b>Open the designer</b> and <b>Show the wired circuit</b> switch between the two.</li>
+      <li>The wired circuit: sources sit on the left, gates in the middle in order of signal depth, and LEDs, the display and the scope on the right. Feedback paths, like the cross-coupling in a latch, loop underneath. Wires are red when HIGH, green when LOW, dashed when floating, and blinking amber when two outputs fight.</li>
+      <li>Click a switch, pulse or the clock on the diagram to operate it. Click a gate to select its module on the bench.</li>
+      <li>The designer: draw a circuit from ideal gates (AND, OR, NAND, NOR, XOR, XNOR, NOT with 2–8 inputs), switches, pulses, the clock, constants, LEDs and the hex display. Drag from an output dot to an input dot to wire them.</li>
+      <li><b>Build on bench</b> runs the solver. It breaks the gates into real 74xx gates and rewrites them so they fit the chips already in the case (AND becomes NAND + NOT, OR goes through NANDs, and so on), cancels double inverters, and packs the result into as few modules as possible. Missing chips come from the rack. It then lays every dupont cable within the real limits (two headers per pin, one cable per header) and lists them so you can copy the wiring onto the real case. Undo on the top bar restores the bench as it was.</li>
+    </ul>
+    <h3>Truth tables</h3>
+    <ul>
+      <li>The truth table sheet measures a hand-wired bench by itself whenever the wiring changes, except for circuits with memory, where stepping the switches would change what a latch or counter holds. <b>Design</b> and <b>Bench</b> fill it on demand: from your design (ideal gates), or by measuring the bench: it steps through every combination of the wired switches and pulses, reads the LEDs, then puts the switches back. Circuits with memory are evaluated top to bottom, so each row follows on from the one above.</li>
+      <li>Click an output cell to cycle it through 0, 1 and X (don't care). The minimised expression for each output updates as you edit (Quine–McCluskey).</li>
+      <li><b>Create design</b> turns the table into gates and opens it in the designer. Tick <b>and build it on the bench</b> to go straight from a truth table to modules and cables.</li>
+      <li>The <b>Smart</b> style designs the way a person at the bench does. It spots XOR patterns (parity, Gray code) and chains them, reuses outputs and signals it has already built (one output can be a single gate fed by two earlier ones), and tries short tricks of up to three gates. Otherwise it falls back to minimised NAND–NAND or NOR–NOR. It designs for the chips in your case: without a 7408 or 7432, an AND or OR counts as the two gates it really costs. The four classic styles give the plain textbook forms.</li>
+    </ul>
+    <h3>Optimize</h3>
+    <ul>
+      <li><b>Optimize</b> on the top bar shortens the cable runs on any bench, whether you wired it by hand or the solver built it. It may move modules to other slots (empty ones too) and turn them 180°. It can also move a gate's job to an identical gate on the same or another chip of the same type, swap the inputs of symmetric gates, and re-lay every connection as the shortest chain the header pins allow. The circuit stays electrically the same. Modules that gain nothing from moving stay where they are, and Undo restores the old layout.</li>
+      <li>The design builder runs the same optimizer after a build when <b>Optimize placement and cable runs</b> is ticked. It fills one chip before starting the next, and it uses spare gates on chips it already needs (for example, a spare XOR with H as an inverter) before adding a module. In Settings you can stop it turning modules, or keep every gate where it is so that only modules move and cables are re-laid.</li>
+    </ul>
+    <h3>Printing a lab sheet</h3>
+    <ul><li><b>Print</b> on the top bar makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
+    <h3>The case</h3>
+    <ul><li>Press either latch on the front of the case to close the lid, and press it again to open it. While the lid is shut, the bench ignores clicks, but the circuit keeps running if MAINS is on.</li></ul>
+    <h3>Camera</h3>
+    <ul><li>Right-drag to orbit, middle-drag to pan, scroll to zoom. That works over the sheets and this pamphlet too. On touch screens, use two fingers. This pamphlet lies on the table to the right of the case.</li></ul>
+  </div></div>
+  <footer class="hp-nav"><button id="hpPrev" aria-label="Previous page">‹ Back</button><span id="hpNum">1 / 1</span><button id="hpNext" aria-label="Next page">Next ›</button></footer>
+</div>
+</div></div>
 
 <header id="bar">
   <div class="brand"><b>UNILOG-2</b><span class="by">by <strong>daamioo</strong></span><span class="sub">Logic elements set</span></div>
   <div class="tools">
-    <button id="bDrawer" aria-pressed="true">Modules</button>
     <select id="selEx" aria-label="Load an example circuit">
       <option value="">Examples…</option>
       <option value="xor">XOR from four NANDs</option>
@@ -283,18 +431,10 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
     <button id="bSave">Save / load</button>
     <button id="bPrint" title="Print a lab sheet: case layout, truth table, logic diagram and a numbered wiring list">Print</button>
     <button id="bSet" aria-pressed="false">Settings</button>
-    <button id="bHelp" aria-label="Help">Help</button>
   </div>
   <div id="status" class="pill"><i></i><span>…</span></div>
 </header>
 
-<aside id="drawer" class="float">
-  <header>
-    <h2>Module drawer</h2>
-    <p class="hint">Drag a module onto a slot. Dropping on an occupied slot swaps the chip and keeps its wires.</p>
-  </header>
-  <div id="lib"></div>
-</aside>
 
 <section id="info" class="float" hidden></section>
 
@@ -324,83 +464,7 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
   <button id="vTop">Top</button>
 </div>
 
-<section id="logic" class="float" hidden aria-label="Logic diagram of the wired circuit">
-  <header>
-    <h2>Logic view</h2>
-    <div class="segm" role="group" aria-label="Logic view mode">
-      <button id="tabLive" aria-pressed="true">Circuit</button>
-      <button id="tabDesign" aria-pressed="false">Design</button>
-      <button id="tabTT" aria-pressed="false">Truth table</button>
-    </div>
-    <span class="grow"></span>
-    <button id="lvFit">Fit</button>
-    <button id="lvFull" aria-pressed="false">Full width</button>
-    <button id="lvClose" aria-label="Close logic view">Close</button>
-  </header>
-  <div id="lvPane" class="pane">
-    <div class="stage">
-      <svg id="lvSvg" xmlns="http://www.w3.org/2000/svg"><g id="lvRoot"></g></svg>
-      <p id="lvEmpty" hidden>Nothing is wired yet. Run a cable in the 3D view and the circuit is drawn here, with every wire showing its live level.</p>
-    </div>
-    <footer class="lv-foot">
-      <span><i style="background:var(--hi)"></i>HIGH</span>
-      <span><i style="background:var(--lv-lo)"></i>LOW</span>
-      <span><i style="background:repeating-linear-gradient(90deg,var(--float) 0 5px,transparent 5px 9px)"></i>floating</span>
-      <span><i style="background:var(--warn)"></i>conflict</span>
-      <span>Click a switch or pulse to operate it · click a gate to find it on the bench · drag to pan, scroll to zoom</span>
-    </footer>
-  </div>
-  <div id="dzPane" class="pane" hidden>
-    <div class="dz-bar" id="dzPalette">
-      <span class="lbl">In</span>
-      <button data-add="sw">Switch</button><button data-add="pulse">Pulse</button><button data-add="clk">Clock</button><button data-add="one">1</button><button data-add="zero">0</button>
-      <span class="lbl">Gates</span>
-      <button data-add="and">AND</button><button data-add="or">OR</button><button data-add="nand">NAND</button><button data-add="nor">NOR</button><button data-add="xor">XOR</button><button data-add="xnor">XNOR</button><button data-add="not">NOT</button>
-      <span class="lbl">Out</span>
-      <button data-add="led">LED</button><button data-add="hex">Hex display</button>
-    </div>
-    <div class="dz-bar dz-sel" id="dzSel"></div>
-    <div class="stage">
-      <svg id="dzSvg" xmlns="http://www.w3.org/2000/svg"><g id="dzRoot"></g></svg>
-      <p id="dzEmpty" class="lv-emptyish" style="position:absolute;inset:90px 24px auto;text-align:center;color:var(--muted);line-height:1.5">Draw a circuit with ideal gates, then press <b>Build on bench</b>. The solver picks modules, places them in the case and runs every dupont cable.<br><button id="dzEx" style="margin-top:12px">Load example: half adder</button></p>
-    </div>
-    <div class="dz-foot">
-      <button id="dzBuild" class="primary">Build on bench</button>
-      <label><input type="checkbox" id="dzPrefer" checked> Prefer chips already in the case</label>
-      <label><input type="checkbox" id="dzOpt" checked> Optimize placement and cable runs</label>
-      <button id="dzUndo">Undo</button>
-      <button id="dzClear">Clear design</button>
-      <span id="dzMsg"></span>
-    </div>
-    <details id="dzReport" hidden><summary>Build report and wiring list</summary><div id="dzSum"></div><ol id="dzList"></ol></details>
-  </div>
-  <div id="ttPane" class="pane" hidden>
-    <div class="dz-bar">
-      <span class="lbl">Fill from</span>
-      <button id="ttFromDesign" title="Work out the table from the gate design">Design</button>
-      <button id="ttFromBench" title="Measure the bench: steps through every combination of the wired switches and pulses and reads the LEDs">Bench</button>
-      <span class="lbl">New table</span>
-      <label>Inputs <select id="ttN"></select></label>
-      <label>Outputs <select id="ttM"></select></label>
-      <button id="ttZero">Clear outputs</button>
-    </div>
-    <div class="tt-wrap"><table id="ttTable"></table></div>
-    <div id="ttExpr" class="tt-expr"></div>
-    <div class="dz-foot">
-      <label>Style <select id="ttStyle">
-        <option value="smart" selected>Smart: like a person would (XOR tricks, shared logic)</option>
-        <option value="sop">AND–OR (sum of products)</option>
-        <option value="nand">NAND–NAND</option>
-        <option value="pos">OR–AND (product of sums)</option>
-        <option value="nor">NOR–NOR</option>
-      </select></label>
-      <button id="ttMake" class="primary">Create design</button>
-      <label><input type="checkbox" id="ttBuild"> and build it on the bench</label>
-      <button id="ttCopy">Copy table</button>
-      <span id="ttMsg"></span>
-    </div>
-  </div>
-</section>
+
 
 <section id="scope" class="float" hidden>
   <header>
@@ -435,68 +499,10 @@ body.lv-full #logic{width:auto;left:max(12px,env(safe-area-inset-left,0px))}
     <label for="prDiagSrc" style="display:block;margin-top:12px;color:var(--muted);font-size:12.5px">Diagram</label>
     <select id="prDiagSrc">
       <option value="auto">Gate design if it was built, otherwise the circuit as wired</option>
-      <option value="design">Gate design (Design tab)</option>
+      <option value="design">Gate design (from the designer)</option>
       <option value="live">Circuit as wired on the bench</option>
     </select>
     <div class="row"><button class="primary" id="prGo">Print</button><button data-close>Cancel</button></div>
-  </div>
-</div>
-
-<div class="modal" id="mHelp" hidden>
-  <div class="card">
-    <h2>Working the UNILOG-2 bench</h2>
-    <p style="color:var(--muted);margin-top:-2px">UNILOG-2 simulator by <b style="color:var(--accent)">daamioo</b></p>
-    <p>The case works like the one in the lab. Modules sit in 12 slots. A module works only once it has power: cable its +5V (VCC) and 0V (GND) pins to the rail. Until then its outputs are dead. <b>Wire power</b> in the inspector does it for you, and the design builder cables power for every module it uses. Every chip pin has two header pins, and every header takes one dupont cable. Chip inputs that aren't connected float HIGH, the way TTL does. The display register LEDs stay dark until a signal drives them HIGH.</p>
-    <h3>Wiring</h3>
-    <ul>
-      <li>Click a pin, then click another pin to run a cable. Dragging from pin to pin also works.</li>
-      <li>Drag a cable end off its pin to move it. Release it on empty space to unplug it.</li>
-      <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in the inspector.</li>
-      <li><kbd>Esc</kbd> cancels a cable you're placing.</li>
-    </ul>
-    <h3>Modules</h3>
-    <ul>
-      <li>Drag a chip from the drawer onto a slot. On an occupied slot it replaces the module there and keeps the cables on matching pins.</li>
-      <li>Drag a module that's already in the case to move it. Dropping it on another module swaps the two, and the cables go with them. Drop it outside the case to put it back in the drawer.</li>
-      <li>Click a module to see its pinout and whether it is powered. <kbd>R</kbd> turns it 180°.</li>
-      <li>The <b>splitter</b> board (Wiring, in the drawer) has 14 rows of 4 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
-    </ul>
-    <h3>Panel</h3>
-    <ul>
-      <li><b>Rail</b> between the rows: <kbd>0V</kbd>, <kbd>H</kbd> and <kbd>+5V</kbd>, once per column. The UNILOG-2 manual calls the H pins "constant logic levels": they give a logic 1 for inputs that must stay HIGH. In the simulator the three H pins of a column are one point, so they also work as a junction: plug an output in, and the other two H pins carry that output (it overrides the logic 1). Wiring +5V straight to 0V trips the supply.</li>
-      <li><b>Switch register</b>: 8 latching buttons, each with Q and Q̄ outputs. Keys <kbd>1</kbd>–<kbd>8</kbd> toggle them too.</li>
-      <li><b>Pulse</b>: 3 momentary buttons with ⊓ (HIGH while held) and ⊔ (LOW while held) outputs.</li>
-      <li><b>Clock</b>: pick 1 Hz, 1 kHz or 1 MHz. CAL trims the rate (drag it or use the scroll wheel). 1 MHz runs in slow motion so the simulation can keep up.</li>
-      <li><b>Display</b>: segment inputs a–g and DP are active-high. If any of the 2⁰–2³ inputs is wired, the built-in decoder shows that hex digit.</li>
-      <li><b>Oscilloscope</b>: wire a signal to the A or B pin next to the BNC sockets, then open the scope window.</li>
-    </ul>
-    <h3>Logic view</h3>
-    <ul>
-      <li>Press <b>Logic view</b> or <kbd>L</kbd> to see the wired circuit as a logic diagram. Sources sit on the left, gates in the middle in order of signal depth, and LEDs, the display and the scope on the right. Feedback paths, like the cross-coupling in a latch, loop underneath.</li>
-      <li>Wires are red when HIGH, green when LOW, dashed when floating, and blinking amber when two outputs fight.</li>
-      <li>Click a switch, pulse or the clock in the diagram to operate it. Click a gate to select its module on the bench.</li>
-      <li><b>Design</b> tab: draw a circuit from ideal gates (AND, OR, NAND, NOR, XOR, XNOR, NOT with 2–8 inputs), switches, pulses, the clock, constants, LEDs and the hex display. Drag from an output dot to an input dot to wire them.</li>
-      <li><b>Build on bench</b> runs the solver. It breaks the gates into real 74xx gates and rewrites them so they fit the chips already in the case (AND becomes NAND + NOT, OR goes through NANDs, and so on), cancels double inverters, and packs the result into as few modules as possible. Missing chips come from the drawer. It then lays every dupont cable within the real limits (two headers per pin, one cable per header) and lists them so you can copy the wiring onto the real case. Undo on the top bar restores the bench as it was.</li>
-    </ul>
-    <h3>Truth tables</h3>
-    <ul>
-      <li>The <b>Truth table</b> tab fills a table from your <b>Design</b> (ideal gates), or measures the <b>Bench</b>: it steps through every combination of the wired switches and pulses, reads the LEDs, then puts the switches back. Circuits with memory are evaluated top to bottom, so each row follows on from the one above.</li>
-      <li>Click an output cell to cycle it through 0, 1 and X (don't care). The minimised expression for each output updates as you edit (Quine–McCluskey).</li>
-      <li><b>Create design</b> turns the table into gates and opens it in the Design tab. Tick <b>and build it on the bench</b> to go straight from a truth table to modules and cables.</li>
-      <li>The <b>Smart</b> style designs the way a person at the bench does. It spots XOR patterns (parity, Gray code) and chains them, reuses outputs and signals it has already built (one output can be a single gate fed by two earlier ones), and tries short tricks of up to three gates. Otherwise it falls back to minimised NAND–NAND or NOR–NOR. It designs for the chips in your case: without a 7408 or 7432, an AND or OR counts as the two gates it really costs. The four classic styles give the plain textbook forms.</li>
-    </ul>
-    <h3>Optimize</h3>
-    <ul>
-      <li><b>Optimize</b> on the top bar shortens the cable runs on any bench, whether you wired it by hand or the solver built it. It may move modules to other slots (empty ones too) and turn them 180°. It can also move a gate's job to an identical gate on the same or another chip of the same type, swap the inputs of symmetric gates, and re-lay every connection as the shortest chain the header pins allow. The circuit stays electrically the same. Modules that gain nothing from moving stay where they are, and Undo restores the old layout.</li>
-      <li>The design builder runs the same optimizer after a build when <b>Optimize placement and cable runs</b> is ticked. It fills one chip before starting the next, and it uses spare gates on chips it already needs (for example, a spare XOR with H as an inverter) before adding a module. In Settings you can stop it turning modules, or keep every gate where it is so that only modules move and cables are re-laid.</li>
-    </ul>
-    <h3>Printing a lab sheet</h3>
-    <ul><li><b>Print</b> on the top bar makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
-    <h3>The case</h3>
-    <ul><li>Press either latch on the front of the case to close the lid, and press it again to open it. While the lid is shut, the bench ignores clicks, but the circuit keeps running if MAINS is on.</li></ul>
-    <h3>Camera</h3>
-    <ul><li>Right-drag to orbit, middle-drag to pan, scroll to zoom. On touch screens, use two fingers.</li></ul>
-    <div class="row"><button class="primary" data-close>Got it</button></div>
   </div>
 </div>
 
@@ -693,7 +699,7 @@ const CHIPS = {
 const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders', 'Wiring'];
 const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153']);
 // The modules that really exist in the lab, checked against the photos of the case and of the module box.
-// The other chips stay defined so benches saved with them still load, but the drawer no longer offers them.
+// The other chips stay defined so benches saved with them still load, but the rack no longer offers them.
 // The splitter board isn't in the photos, but it is in the lab.
 const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', 'SPLIT'];
 // Board versions seen in the photos. Cream boards number the pins like the chip (notch up, pin 1 top left).
@@ -762,7 +768,7 @@ const WIRE_COLORS = [
 /* ================================================================
    RENDERER / SCENE
    ================================================================ */
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.shadowMap.enabled = true;
@@ -842,7 +848,13 @@ function box(w, h, d, mat, x, y, z, parent = scene, shadow = true) {
 }
 // The lid can be shut and opened again with the two latches on the front of the case.
 const LID_OPEN = -1.83, LID_SHUT = 0, CLASP_OPEN = 1.25;
-const CASE = { lid: null, open: true, latches: [], latchMeshes: [], anim: null, wiresVis: true };
+const CASE = { lid: null, open: true, latches: [], latchMeshes: [], anim: null, wiresVis: true, sheet: null };
+// The papers: the logic diagram (A4 landscape) and the truth table (A4 portrait) in the lid pocket, and the help
+// pamphlet (A5) on the table. Their meshes only cut a hole in the canvas; the page itself is DOM (see PAPERS).
+// pocket: how many cm of the page sit inside the pocket, out of sight.
+const SHEET = { diag: { el: 'pDiag', pocket: 3 }, tt: { el: 'pTT', pocket: 3 }, help: { el: 'pHelp', pocket: 0 } };
+const PUNCH = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, blending: THREE.NoBlending, fog: false });
+const PAPER_BLANK = new THREE.MeshStandardMaterial({ color: 0xefebe0, roughness: 0.9 });
 function buildCase() {
   const table = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.9 }));
   table.rotation.x = -Math.PI / 2; table.position.y = -6.6; table.receiveShadow = true; scene.add(table);
@@ -891,8 +903,20 @@ function buildCase() {
   const lining = new THREE.MeshStandardMaterial({ map: fabricTex(6, 18, '#c06a33'), roughness: 0.9 });
   const lidBox = new THREE.Mesh(new THREE.BoxGeometry(65, 3.6, 47.5), [M.leather, M.leather, M.leather, lining, M.leather, M.leather]);
   lidBox.position.set(0, 1.8, 23.75); lidBox.castShadow = true; lidBox.receiveShadow = true; lid.add(lidBox);
-  box(52, 0.4, 14, M.leather, 0, -0.2, 26, lid);                 // document pocket
-  box(4, 0.45, 9, M.leather, 0, -0.25, 33, lid);                 // pocket strap
+  box(57, 0.4, 9, M.leather, 0, -0.2, 12.5, lid);                // document pocket
+  box(4, 0.45, 5, M.leather, 0, -0.25, 12.5, lid);               // pocket strap
+  // two A4 sheets tucked 3 cm into the pocket: the logic diagram (landscape) and the truth table (portrait)
+  const paper = (p, w, h, x, z, tilt) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), PUNCH);
+    m.rotation.set(Math.PI / 2, 0, tilt); m.position.set(x, -0.06, z); lid.add(m); p.mesh = m;
+  };
+  paper(SHEET.diag, 29.7, 21, -11, 24.5, -0.012);
+  paper(SHEET.tt, 21, 29.7, 15.6, 28.85, 0.018);
+  // the help pamphlet lies on the table to the right of the case, on top of a few pages' worth of thickness
+  const pam = new THREE.Group(); pam.position.set(44, -6.6, 10); pam.rotation.y = -0.16; scene.add(pam);
+  box(14.8, 0.18, 21, new THREE.MeshStandardMaterial({ color: 0xd9d3c3, roughness: 0.9 }), 0, 0.09, 0, pam);
+  const hp = new THREE.Mesh(new THREE.PlaneGeometry(14.8, 21), PUNCH);
+  hp.rotation.x = -Math.PI / 2; hp.position.y = 0.185; pam.add(hp); SHEET.help.mesh = hp;
   box(1, 0.3, 30, M.chrome, -30.8, -1, 16, lid);                 // lid stays
   box(1, 0.3, 30, M.chrome, 30.8, -1, 16, lid);
 }
@@ -1882,7 +1906,7 @@ const EX_NOTES = {
 };
 
 /* ================================================================
-   UI: drawer, inspector, toasts, tooltip
+   UI: inspector, toasts, tooltip
    ================================================================ */
 function toast(msg, bad = false) {
   const el = document.createElement('div'); el.className = 'toast' + (bad ? ' bad' : ''); el.textContent = msg;
@@ -1891,25 +1915,24 @@ function toast(msg, bad = false) {
   setTimeout(() => el.remove(), bad ? 6500 : 3800);
 }
 const pinHTML = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/~(.*)$/, '<span class="ov">$1</span>');
-function buildLibrary() {
-  const lib = $('#lib');
-  for (const grp of GROUPS) {
-    const chips = Object.entries(CHIPS).filter(([, d]) => d.group === grp && !d.legacy);   // only modules that exist in the lab
-    if (!chips.length) continue;
-    const g = document.createElement('div'); g.className = 'grp';
-    g.innerHTML = `<h3>${grp}</h3>`;
-    for (const [k, d] of chips) {
-      const b = document.createElement('div'); b.className = 'chip'; b.tabIndex = 0; b.setAttribute('role', 'button');
-      const vs = BOARD_VARIANTS[k] || [];
-      b.innerHTML = `<span class="n">${k}</span><span class="d">${d.desc}</span><span class="p">${d.pins}-pin · ${vs.map(v => v === 'mirrored' ? 'gray' : v).join(' / ')}</span>`;
-      b.addEventListener('pointerdown', e => startPlacing(k, e));
-      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dropInFirstFree(k); } });
-      g.appendChild(b);
-    }
-    lib.appendChild(g);
-  }
+// The module rack: one board of every lab module, lying on the table left of the case in two fanned stacks
+// (each board overlaps the one behind it, so every board's label stays in sight). Drag a board onto a slot to fit
+// that module; a click drops it into the first free slot. The rack never runs out.
+const RACK = { step: 4.1, rise: 0.13, cols: [-50.6, -40.3] };
+function buildRack() {
+  const types = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp && !CHIPS[k].legacy));
+  const per = Math.ceil(types.length / 2);
+  box(24, 0.14, per * RACK.step + BOARD_D + 3, new THREE.MeshStandardMaterial({ color: 0x1d2a24, roughness: 0.95 }), (RACK.cols[0] + RACK.cols[1]) / 2, -6.53, 3);   // felt mat
+  types.forEach((type, i) => {
+    const c = i < per ? 0 : 1, r = c ? i - per : i;
+    const mm = buildModuleMesh(type);
+    mm.group.children.filter(o => o !== mm.board).forEach(o => mm.group.remove(o));   // no brass posts: the boards lie stacked
+    mm.group.position.set(RACK.cols[c], -6.46 - BOARD_TOP + 0.12 + r * RACK.rise, 3 - (per - 1) * RACK.step / 2 + r * RACK.step);
+    scene.add(mm.group);
+    addPick(mm.board, { kind: 'rack', type });
+  });
 }
-buildLibrary();
+buildRack();
 let wireColor = null, colorCycle = 0;
 function buildSwatches() {
   const wrap = $('#swatches');
@@ -1953,11 +1976,11 @@ function select(s) {
       <div class="dip">${rows}</div>
       <p class="sub" style="margin-top:10px">${d.passive ? '' : 'Outputs in red. '}${where}</p>
       ${d.passive ? '' : `<p class="sub">Power: ${S.autoPower ? 'shortcut on, powered without cables' : s.m.powered ? '<b style="color:#8be28b">wired, powered</b>' : `<b style="color:#ff9b8a">not powered</b>, cable pin ${d.vcc} (+5V) and pin ${d.gnd} (0V) to the rail`}</p>`}
-      <div class="row">${d.passive || S.autoPower || s.m.powered ? '' : '<button id="iPwr">Wire power</button>'}<button id="iRot">Turn 180° (R)</button>${vs.length > 1 ? `<button id="iVar">Use the ${s.m.variant === 'mirrored' ? 'cream' : 'gray mirrored'} board</button>` : ''}<button id="iDel">Return to drawer</button><button id="iClose">Close</button></div>`;
+      <div class="row">${d.passive || S.autoPower || s.m.powered ? '' : '<button id="iPwr">Wire power</button>'}<button id="iRot">Turn 180° (R)</button>${vs.length > 1 ? `<button id="iVar">Use the ${s.m.variant === 'mirrored' ? 'cream' : 'gray mirrored'} board</button>` : ''}<button id="iDel">Return to rack</button><button id="iClose">Close</button></div>`;
     $('#iRot').onclick = () => rotateModule(s.m);
     if ($('#iPwr')) $('#iPwr').onclick = () => { pushUndo(); wirePower([s.m]); save(); select(s); toast(`${s.m.type}: +5V and 0V cabled to the rail.`); };
     if ($('#iVar')) $('#iVar').onclick = () => setBoardVariant(s.m, s.m.variant === 'mirrored' ? 'cream' : 'mirrored');
-    $('#iDel').onclick = () => { pushUndo(); const t = s.m.type; destroyModule(s.m); rebuild(); save(); toast(`${t} is back in the drawer.`); };
+    $('#iDel').onclick = () => { pushUndo(); const t = s.m.type; destroyModule(s.m); rebuild(); save(); toast(`${t} is back on the rack.`); };
     $('#iClose').onclick = () => select(null);
   } else if (s.w) {
     s.w.mat.emissive.setHex(0x444444);
@@ -2069,7 +2092,7 @@ function pickUpEnd(w, end) {
   rebuild();
 }
 
-// module dragging and placing from the drawer
+// module dragging, and placing from the rack
 let drag = null;   // { m?, type?, group, grabDX, grabDZ, fromSlot }
 const slotMarker = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W, 0.06, BOARD_D), new THREE.MeshBasicMaterial({ color: 0xd3a24a, transparent: true, opacity: 0.32, depthWrite: false }));
 slotMarker.visible = false; scene.add(slotMarker);
@@ -2098,7 +2121,7 @@ function endModuleDrag() {
   drag = null; showSlot(-1);
   if (slot < 0) {
     pushUndo(); const t = m.type; destroyModule(m); rebuild(); save();
-    toast(`${t} is back in the drawer. Its cables were unplugged.`); return;
+    toast(`${t} is back on the rack. Its cables were unplugged.`); return;
   }
   if (slot !== m.slot) {
     pushUndo();
@@ -2110,7 +2133,6 @@ function endModuleDrag() {
 }
 function startPlacing(type, e) {
   if (!CASE.open) { toast('Open the case first: press one of the latches on the front.'); return; }
-  if (e.pointerType === 'touch') { e.target.closest('.chip').addEventListener('click', () => dropInFirstFree(type), { once: true }); return; }
   e.preventDefault();
   const mm = buildModuleMesh(type);
   mm.group.visible = false; scene.add(mm.group);
@@ -2151,8 +2173,10 @@ function swapModule(old, type, variant) {
   return { m, lost };
 }
 function putModule(type, slot) {
-  pushUndo();
   const old = moduleAt(slot);
+  // a module with cables on it stays put: unplug them (or move the module) first
+  if (old && wires.some(w => wireTouches(w, old))) { toast(`Slot ${slot + 1} holds a ${old.type} that is wired. Unplug its cables first, or drop the ${type} on a free slot.`, true); return; }
+  pushUndo();
   if (old) {
     const { lost } = swapModule(old, type);
     toast(`${old.type} swapped for ${type}. Cables stayed on the same pin numbers${lost ? `, ${lost} had no matching pin and were unplugged` : ''}.`);
@@ -2168,7 +2192,7 @@ function setBoardVariant(m, variant) {
 function dropInFirstFree(type) {
   if (!CASE.open) { toast('Open the case first: press one of the latches on the front.'); return; }
   for (const i of [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5]) if (!moduleAt(i)) { putModule(type, i); toast(`${type} placed in slot ${i + 1}.`); return; }
-  toast('All 12 slots are full. Drag the chip onto a module to swap it.', true);
+  toast('All 12 slots are full. Drag the chip onto a module with no cables to replace it.', true);
 }
 function rotateModule(m) { pushUndo(); m.rot ^= 1; placeModuleGroup(m); updateWiresFor(m); save(); if (selected && selected.m === m) select({ m }); }
 
@@ -2200,6 +2224,7 @@ function controlTip(ud) {
     case 'mains': return `<div class="t">MAINS ${S.mains ? 'ON' : 'OFF'}</div><div class="k">Click to switch the case ${S.mains ? 'off' : 'on'}</div>`;
     case 'probe': return `<div class="t">Probe socket</div><div class="k">Hover any pin to read its level</div>`;
     case 'bnc': return `<div class="t">Oscilloscope input ${ud.ch}</div><div class="k">Wire a signal to the pin beside it. Click to open the scope.</div>`;
+    case 'rack': return `<div class="t">${ud.type} · ${CHIPS[ud.type].desc}</div><div class="k">Drag onto a slot to fit it, or click to drop it in the first free slot</div>`;
     case 'latch': return `<div class="t">Case latch</div><div class="k">Click to ${CASE.open ? 'close' : 'open'} the case</div>`;
     case 'module': return `<div class="t">${ud.m.type} · ${ud.m.def.desc}</div><div class="k">Click for the pinout. Drag to move it, R to turn it.</div>`;
   }
@@ -2219,6 +2244,7 @@ canvas.addEventListener('pointerdown', e => {
   const ud = ptr.down.ud;
   if (ud && !wiring) {
     if (ud.kind === 'switch' || ud.kind === 'range' || ud.kind === 'mains' || ud.kind === 'probe' || ud.kind === 'bnc' || ud.kind === 'latch') { pressControl(ud); ptr.down = null; return; }
+    if (ud.kind === 'rack') { startPlacing(ud.type, e); ptr.down = null; return; }
     if (ud.kind === 'pulse') { pressControl(ud); ptr.mode = 'pulse'; ptr.pulse = ud.i; }
     if (ud.kind === 'knob') { ptr.mode = 'knob'; ptr.cal0 = S.cal; }
   }
@@ -2231,6 +2257,8 @@ function flushMove() { if (pendingMove) { const e = pendingMove; pendingMove = n
 function onMove(e) {
   setNDC(e);
   if (drag && drag.type) return;
+  // over a visible page, let the pointer through to it (see PAPERS)
+  if (!ptr.down && !wiring && !drag && !e.buttons && paperUnder()) { canvas.style.pointerEvents = 'none'; hideTip(); setHoverHeader(null, false); canvas.style.cursor = ''; return; }
   if (ptr.down && !ptr.moved && Math.hypot(e.clientX - ptr.down.x, e.clientY - ptr.down.y) > 5) {
     ptr.moved = true;
     const ud = ptr.down.ud;
@@ -2264,7 +2292,7 @@ function hover(e) {
   else if (ud && ud.kind === 'wire') { const n = H.get(ud.w.a).term.net, [lc, lt] = lampFor(n); html = `<div class="t">Cable</div><div class="s"><span class="lamp" style="background:${lc}"></span>${lt}</div><div class="k">Click to select · double-click to unplug</div>`; }
   else if (ud && !wiring) html = controlTip(ud);
   if (html && e) showTip(e.clientX, e.clientY, html); else hideTip();
-  if (!wiring) canvas.style.cursor = ud ? (ud.kind === 'module' ? 'grab' : 'pointer') : '';
+  if (!wiring) canvas.style.cursor = ud ? (ud.kind === 'module' || ud.kind === 'rack' ? 'grab' : 'pointer') : '';
 }
 canvas.addEventListener('pointerup', e => {
   if (e.button !== 0) return;
@@ -2313,16 +2341,21 @@ window.addEventListener('wheel', e => {
 }, { capture: true, passive: false });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea,select')) return;
-  const inDesign = LV.open && LV.mode === 'design';
+  const inDesign = LV.dz && PAPER.focus === 'diag';   // undo and delete go to the designer after you last worked on its sheet
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (inDesign) dzUndo(); else undo(); return; }
   if (inDesign && (e.key === 'Delete' || e.key === 'Backspace') && DZ.sel) { e.preventDefault(); dzDelete(); return; }
-  if (e.key === 'Escape') { if (wiring) cancelWiring(false); else select(null); document.querySelectorAll('.modal').forEach(m => m.hidden = true); return; }
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (selected && selected.w) { pushUndo(); removeWire(selected.w); rebuild(); save(); }
-    else if (selected && selected.m) { pushUndo(); const t = selected.m.type; destroyModule(selected.m); rebuild(); save(); toast(`${t} is back in the drawer.`); }
+  if (e.key === 'Escape') {
+    if (wiring) cancelWiring(false); else select(null);
+    document.querySelectorAll('.modal').forEach(m => m.hidden = true);
+    if (['diag', 'tt', 'help'].some(readingSheet)) goView('bench');
     return;
   }
-  if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) { lvSetOpen(!LV.open); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selected && selected.w) { pushUndo(); removeWire(selected.w); rebuild(); save(); }
+    else if (selected && selected.m) { pushUndo(); const t = selected.m.type; destroyModule(selected.m); rebuild(); save(); toast(`${t} is back on the rack.`); }
+    return;
+  }
+  if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) { $('#bLogic').onclick(); return; }
   if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
     let m = selected && selected.m;
     if (!m) { const hit = pick(); if (hit && hit.object.userData.kind === 'module') m = hit.object.userData.m; else if (hoverH && hoverH.mod) m = hoverH.mod; }
@@ -2335,9 +2368,6 @@ window.addEventListener('keydown', e => {
 /* ================================================================
    TOOLBAR WIRING
    ================================================================ */
-const drawer = $('#drawer');
-$('#bDrawer').onclick = () => { drawer.hidden = !drawer.hidden; $('#bDrawer').setAttribute('aria-pressed', String(!drawer.hidden)); };
-if (innerWidth < 760) { drawer.hidden = true; $('#bDrawer').setAttribute('aria-pressed', 'false'); }
 $('#selEx').onchange = e => {
   const k = e.target.value; e.target.value = ''; if (!k) return;
   pushUndo();
@@ -2378,7 +2408,6 @@ function applyQuality(q) {
   resize(); invalidate(true);
 }
 $('#optQ').onchange = e => { applyQuality(e.target.value); try { localStorage.setItem('unilog2.quality', e.target.value); } catch (_) {} };
-$('#bHelp').onclick = () => { $('#mHelp').hidden = false; };
 function exportBench(title) {
   const design = { nodes: D.nodes, wires: D.wires, seq: D.seq };
   if (dzLive()) {
@@ -2435,7 +2464,7 @@ function loadText(txt) {
     }
     $('#mSave').hidden = true;
     benchTitle = d.title || '';
-    toast(d.title ? `Loaded ${d.title}.${d.design ? ' Its gate design is open in the Design tab.' : ''}` : 'Bench loaded.');
+    toast(d.title ? `Loaded ${d.title}.${d.design ? ' Its gate design is open in the designer.' : ''}` : 'Bench loaded.');
   }
   catch (_) { toast('That text is not a saved bench. Paste the whole block that starts with {"v":.', true); }
 }
@@ -2448,7 +2477,7 @@ document.querySelectorAll('.modal').forEach(m => { m.addEventListener('click', e
    Sources (switches, clock, pulses, rails) on the left, gates and chips in the middle in layers by signal
    depth, sinks (LEDs, display, scope) on the right. Feedback paths (latches, counters) loop underneath.
    ================================================================ */
-const LV = { open: false, full: false, dirty: true, items: [], segEls: null, clkEl: null, clkTxt: '', view: { x: 0, y: 0, k: 1 }, W: 0, H: 0, autoFit: true, hoverM: null };
+const LV = { open: true, dirty: true, dz: null, forceDz: -1, fb: false, items: [], segEls: null, clkEl: null, clkTxt: '', view: { x: 0, y: 0, k: 1 }, W: 0, H: 0, autoFit: true, hoverM: null };
 const lvSvg = $('#lvSvg'), lvRoot = $('#lvRoot');
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const lvTxt = s => { const i = s.indexOf('~'); return i < 0 ? esc(s) : esc(s.slice(0, i)) + `<tspan style="text-decoration:overline">${esc(s.slice(i + 1))}</tspan>`; };
@@ -2591,7 +2620,7 @@ function lvBuild() {
   const { nodes, edges } = lvGraph();
   $('#lvEmpty').hidden = nodes.length > 0;
   const lay = lvLayout(nodes, edges);
-  LV.W = lay.W; LV.H = lay.H;
+  LV.W = lay.W; LV.H = lay.H; LV.fb = lay.back.size > 0;
   const P = (p) => [p.node.x + p.x, p.node.y + p.y];
   const out = [], fan = new Map();
   edges.forEach((e, i) => {
@@ -2653,14 +2682,15 @@ function lvBuild() {
   if (LV.autoFit) lvFit();
 }
 function lvApply() { const v = LV.view; lvRoot.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); }
+// the sheet is a fixed page, so the diagram is always fitted to it (layout size: the page may be under a 3D transform)
 function lvFit() {
-  const r = lvSvg.getBoundingClientRect(); if (!r.width || !LV.W) return;
+  const r = { width: lvSvg.clientWidth, height: lvSvg.clientHeight }; if (!r.width || !LV.W) return;
   const k = Math.min((r.width - 24) / LV.W, (r.height - 24) / LV.H, 1.6);
   LV.view = { k, x: (r.width - LV.W * k) / 2, y: Math.max(8, (r.height - LV.H * k) / 2) }; lvApply();
 }
 function lvFrame() {
-  if (LV.mode === 'design') { dzFrame(); return; }
-  if (LV.mode === 'tt') return;
+  if (lvWantsDesign() !== LV.dz) lvPanes();
+  if (LV.dz) { dzFrame(); return; }
   if (LV.dirty) lvBuild();
   for (const it of LV.items) {
     const s = powerOn ? it.net.s : 'off';
@@ -2672,19 +2702,8 @@ function lvFrame() {
   }
   if (LV.clkEl) { const t = `Clock ${fmtHz(freq())}`; if (t !== LV.clkTxt) { LV.clkTxt = t; LV.clkEl.textContent = t; } }
 }
-function lvViewOffset() {
-  const w = innerWidth, h = innerHeight;
-  if (LV.open && !LV.full && w > 760) { const pw = $('#logic').getBoundingClientRect().width + 24; camera.setViewOffset(w, h, pw / 2, 0, w, h); }
-  else camera.clearViewOffset();
-  invalidate();
-}
-function lvSetOpen(open) {
-  LV.open = open;
-  $('#logic').hidden = !open; $('#bLogic').setAttribute('aria-pressed', String(open));
-  document.body.classList.toggle('lv-open', open);
-  if (open) { LV.dirty = true; LV.autoFit = true; if (LV.mode === 'design') { dzRender(); dzStatus(); requestAnimationFrame(dzFit); } else if (LV.mode === 'tt') ttRender(); else lvFrame(); }
-  lvViewOffset();
-}
+// "open" now means looking at the sheet in the lid
+function lvSetOpen(open) { goView(open ? 'sheet:diag' : 'bench'); }
 function lvHoverModule(m) {
   if (LV.hoverM === m) return;
   if (LV.hoverM && !(selected && selected.m === LV.hoverM)) LV.hoverM.mat.emissive.setHex(0);
@@ -2692,15 +2711,8 @@ function lvHoverModule(m) {
   if (m && !(selected && selected.m === m)) m.mat.emissive.setHex(0x3a2800);
   invalidate();
 }
-$('#bLogic').onclick = () => lvSetOpen(!LV.open);
-$('#lvClose').onclick = () => lvSetOpen(false);
-$('#lvFit').onclick = () => { if (LV.mode === 'design') { dzFit(); return; } LV.autoFit = true; lvFit(); };
-$('#lvFull').onclick = () => {
-  LV.full = !LV.full; document.body.classList.toggle('lv-full', LV.full);
-  $('#lvFull').setAttribute('aria-pressed', String(LV.full)); lvViewOffset();
-  requestAnimationFrame(() => { if (LV.autoFit) lvFit(); });
-};
-let lvPan = null, lvPulse = null;
+$('#bLogic').onclick = () => goView(readingSheet('diag') ? 'bench' : 'sheet:diag');
+let lvPulse = null;
 lvSvg.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   const actEl = e.target.closest('[data-act]');
@@ -2711,14 +2723,9 @@ lvSvg.addEventListener('pointerdown', e => {
     else if (k === 'clk') pressControl({ kind: 'range', i: (S.range + 1) % 3 });
     else if (k === 'mod') { const m = modules.find(x => x.uid === +v); if (m) select({ m }); }
     try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
-    return;
   }
-  lvPan = { x: e.clientX, y: e.clientY, vx: LV.view.x, vy: LV.view.y };
-  lvSvg.classList.add('panning');
-  try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
 });
 lvSvg.addEventListener('pointermove', e => {
-  if (lvPan) { LV.view.x = lvPan.vx + e.clientX - lvPan.x; LV.view.y = lvPan.vy + e.clientY - lvPan.y; LV.autoFit = false; lvApply(); hideTip(); return; }
   const el = e.target.closest('[data-tip]');
   const uidEl = e.target.closest('[data-uid]');
   lvHoverModule(uidEl ? modules.find(x => x.uid === +uidEl.dataset.uid) || null : null);
@@ -2727,17 +2734,10 @@ lvSvg.addEventListener('pointermove', e => {
   if (el.dataset.net != null) { const [lc, lt] = lampFor(nets[+el.dataset.net]); html += `<div class="s"><span class="lamp" style="background:${lc};box-shadow:0 0 6px ${lc}"></span>${lt}</div>`; }
   showTip(e.clientX, e.clientY, html);
 });
-const lvUp = () => { if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; } lvPan = null; lvSvg.classList.remove('panning'); };
+const lvUp = () => { if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; } };
 lvSvg.addEventListener('pointerup', lvUp);
 lvSvg.addEventListener('pointercancel', lvUp);
 lvSvg.addEventListener('pointerleave', () => { hideTip(); lvHoverModule(null); });
-lvSvg.addEventListener('wheel', e => {
-  e.preventDefault();
-  const r = lvSvg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = LV.view;
-  const k = Math.max(0.2, Math.min(4, v.k * Math.exp(-e.deltaY * 0.0015)));
-  v.x = mx - (mx - v.x) * (k / v.k); v.y = my - (my - v.y) * (k / v.k); v.k = k;
-  LV.autoFit = false; lvApply();
-}, { passive: false });
 
 /* ================================================================
    DESIGN MODE: draw with ideal gates, then solve onto real modules
@@ -2745,9 +2745,9 @@ lvSvg.addEventListener('wheel', e => {
 let benchVersion = 0;
 const GATE_T = new Set(['and', 'or', 'nand', 'nor', 'xor', 'xnor', 'not']);
 let D = { nodes: [], wires: [], seq: 1, built: null, builtVersion: -1, changed: false };
-const DZ = { sel: null, view: { x: 30, y: 30, k: 1 }, drag: null, items: [], undo: [], cascade: 0, fitted: false };
+const DZ = { ver: 0, sel: null, view: { x: 30, y: 30, k: 1 }, drag: null, items: [], undo: [], cascade: 0, fitted: false };
 const dzSvg = $('#dzSvg'), dzRoot = $('#dzRoot');
-LV.mode = 'live';
+LV.mode = 'circuit';
 
 function dzGeom(n) {
   if (GATE_T.has(n.t)) {
@@ -2827,7 +2827,7 @@ function dzFrame() {
 }
 function dzApply() { const v = DZ.view; dzRoot.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); }
 function dzFit() {
-  const r = dzSvg.getBoundingClientRect(); if (!r.width) return;
+  const r = { width: dzSvg.clientWidth, height: dzSvg.clientHeight }; if (!r.width) return;
   if (!D.nodes.length) { DZ.view = { x: 30, y: 30, k: 1 }; dzApply(); return; }
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const n of D.nodes) { const g = dzGeom(n); x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y - 14); x1 = Math.max(x1, n.x + g.w); y1 = Math.max(y1, n.y + g.h + 40); }
@@ -2840,10 +2840,11 @@ function dzUndo() {
   if (!DZ.undo.length) { toast('Nothing to undo in the design.'); return; }
   const s = JSON.parse(DZ.undo.pop()); D.nodes = s.nodes; D.wires = s.wires; D.seq = s.seq; DZ.sel = null; dzChanged();
 }
-function dzSave() { try { localStorage.setItem('unilog2.design.v1', dzSnapshot()); } catch (_) {} }
+function dzSave() { DZ.ver++; try { localStorage.setItem('unilog2.design.v1', dzSnapshot()); } catch (_) {} }
 function dzLoad(s) { if (!s || !Array.isArray(s.nodes)) return; D.nodes = s.nodes; D.wires = s.wires || []; D.seq = s.seq || (Math.max(0, ...s.nodes.map(n => n.id)) + 1); D.built = null; DZ.sel = null; }
 function dzChanged() { D.changed = true; dzRender(); dzSave(); dzStatus(); }
 function dzStatus() {
+  $('#dzToLv').hidden = !wires.length || dzLive();
   const m = $('#dzMsg');
   if (m.classList.contains('bad')) return;
   if (D.built && D.builtVersion !== benchVersion) m.textContent = 'The bench changed since the last build. Build again to rewire it from this design.';
@@ -2863,7 +2864,7 @@ function dzDefaultName(t) {
 }
 function dzAdd(t) {
   dzPush();
-  const r = dzSvg.getBoundingClientRect(), v = DZ.view;
+  const r = { width: dzSvg.clientWidth, height: dzSvg.clientHeight }, v = DZ.view;
   const cx = (r.width / 2 - v.x) / v.k, cy = (r.height / 2 - v.y) / v.k, off = (DZ.cascade++ % 6) * 18;
   const n = { id: D.seq++, t, x: Math.round((cx - 50 + off) / 10) * 10, y: Math.round((cy - 20 + off) / 10) * 10, n: t === 'not' ? 1 : 2, name: dzDefaultName(t) };
   D.nodes.push(n); DZ.sel = { node: n.id }; dzChanged();
@@ -2897,7 +2898,7 @@ function dzSelBar() {
   if ($('#dzLow')) $('#dzLow').onchange = e => { dzPush(); n.low = !!e.target.value; dzChanged(); };
   $('#dzDel').onclick = dzDelete;
 }
-const dzPt = e => { const r = dzSvg.getBoundingClientRect(), v = DZ.view; return { x: (e.clientX - r.left - v.x) / v.k, y: (e.clientY - r.top - v.y) / v.k }; };
+const dzPt = e => { const p = paperPoint(dzSvg, e), v = DZ.view; return { x: (p.x - v.x) / v.k, y: (p.y - v.y) / v.k }; };
 function dzPortPos(id, port) {
   const n = D.nodes.find(x => x.id === id); if (!n) return null; const g = dzGeom(n);
   const p = port == null ? g.out : g.ins[port]; return p ? { x: n.x + p.x, y: n.y + p.y } : null;
@@ -2922,11 +2923,12 @@ dzSvg.addEventListener('pointerdown', e => {
     dzRender(); return;
   }
   if (wireEl) { DZ.sel = { wire: +wireEl.dataset.wire }; DZ.drag = null; dzRender(); return; }
-  DZ.sel = null; DZ.drag = { mode: 'pan', x: e.clientX, y: e.clientY, vx: DZ.view.x, vy: DZ.view.y }; dzRender();
+  const p = paperPoint(dzSvg, e);
+  DZ.sel = null; DZ.drag = { mode: 'pan', x: p.x, y: p.y, vx: DZ.view.x, vy: DZ.view.y }; dzRender();
 });
 dzSvg.addEventListener('pointermove', e => {
   const d = DZ.drag; if (!d) return;
-  if (d.mode === 'pan') { DZ.view.x = d.vx + e.clientX - d.x; DZ.view.y = d.vy + e.clientY - d.y; dzApply(); return; }
+  if (d.mode === 'pan') { const p = paperPoint(dzSvg, e); DZ.view.x = d.vx + p.x - d.x; DZ.view.y = d.vy + p.y - d.y; dzApply(); return; }
   if (d.mode === 'node') {
     if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return;
     if (!d.moved) { dzPush(); d.moved = true; }
@@ -2961,12 +2963,6 @@ const dzEnd = e => {
 };
 dzSvg.addEventListener('pointerup', dzEnd);
 dzSvg.addEventListener('pointercancel', () => dzEnd(null));
-dzSvg.addEventListener('wheel', e => {
-  e.preventDefault();
-  const r = dzSvg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = DZ.view;
-  const k = Math.max(0.25, Math.min(3, v.k * Math.exp(-e.deltaY * 0.0015)));
-  v.x = mx - (mx - v.x) * (k / v.k); v.y = my - (my - v.y) * (k / v.k); v.k = k; dzApply();
-}, { passive: false });
 document.querySelectorAll('#dzPalette [data-add]').forEach(b => b.onclick = () => dzAdd(b.dataset.add));
 $('#dzUndo').onclick = dzUndo;
 $('#dzClear').onclick = () => { if (!D.nodes.length) return; dzPush(); D.nodes = []; D.wires = []; DZ.sel = null; dzChanged(); toast('Design cleared. Undo brings it back.'); };
@@ -3170,7 +3166,7 @@ function dzBuild(skipOpt, noSplit) {
     }
   }
   const conc = best.list;
-  // modules: reuse the ones in the case, add the rest from the drawer
+  // modules: reuse the ones in the case, add the rest from the rack
   const insts = [], keepMods = new Set();
   let splitM = splitSigs.size ? modules.find(m => m.type === 'SPLIT') : null;
   if (splitM) keepMods.add(splitM);
@@ -3308,7 +3304,7 @@ function dzBuild(skipOpt, noSplit) {
   $('#dzList').innerHTML = lines.map(l => `<li>${esc(l)}</li>`).join('');
   $('#dzReport').hidden = false; $('#dzReport').open = true;
   dzRender(); dzStatus();
-  toast(`Built: ${insts.length} module${insts.length === 1 ? '' : 's'} and ${cables} cables${best.newMods ? `, ${best.newMods} taken from the drawer` : ', all from the case'}${optInfo && optInfo.applied ? `, runs ${optInfo.pct}% shorter after optimizing` : ''}. Undo on the top bar restores the old bench.`);
+  toast(`Built: ${insts.length} module${insts.length === 1 ? '' : 's'} and ${cables} cables${best.newMods ? `, ${best.newMods} taken from the rack` : ', all from the case'}${optInfo && optInfo.applied ? `, runs ${optInfo.pct}% shorter after optimizing` : ''}. Undo on the top bar restores the old bench.`);
   return true;
 }
 $('#dzBuild').onclick = () => dzBuild();
@@ -3554,19 +3550,26 @@ function optimizeBench(opts = {}) {
   if (selected) select(null);
   return info;
 }
-function lvMode(mode) {
-  LV.mode = mode;
-  for (const [id, md] of [['tabLive', 'live'], ['tabDesign', 'design'], ['tabTT', 'tt']]) $('#' + id).setAttribute('aria-pressed', String(mode === md));
-  $('#lvPane').hidden = mode !== 'live'; $('#dzPane').hidden = mode !== 'design'; $('#ttPane').hidden = mode !== 'tt';
-  $('#lvFit').hidden = mode === 'tt';
-  if (mode === 'design') { dzRender(); dzStatus(); if (!DZ.fitted) { DZ.fitted = true; requestAnimationFrame(dzFit); } }
-  else if (mode === 'tt') ttRender();
-  else { LV.dirty = true; requestAnimationFrame(() => { if (LV.autoFit) lvFit(); }); }
+// The diagram sheet holds both the designer and the diagram of the wired circuit. The designer shows while the case is empty
+// or still holds what was built from the design (its wires then carry the live levels); a hand-wired bench shows as a diagram.
+// "Open the designer" keeps the designer up until the bench changes again.
+const lvWantsDesign = () => LV.forceDz === benchVersion || !wires.length || dzLive();
+function lvPanes() {
+  const dz = lvWantsDesign(), was = LV.dz;
+  LV.dz = dz;
+  $('#lvPane').hidden = dz; $('#dzPane').hidden = !dz;
+  if (dz && was !== true) { dzRender(); dzStatus(); requestAnimationFrame(dzFit); }
+  else if (!dz && was !== false) { LV.dirty = true; requestAnimationFrame(lvFit); }
   hideTip();
 }
-$('#tabLive').onclick = () => lvMode('live');
-$('#tabDesign').onclick = () => lvMode('design');
-$('#tabTT').onclick = () => lvMode('tt');
+// the truth table always has its own sheet; 'design' brings up the designer on the diagram sheet
+function lvMode(mode) {
+  if (mode === 'design') LV.forceDz = benchVersion;
+  if (mode === 'tt') ttRender(); else lvPanes();
+}
+$('#lvToDz').onclick = () => lvMode('design');
+$('#dzFitB').onclick = dzFit;
+$('#dzToLv').onclick = () => { LV.forceDz = -1; lvPanes(); };
 
 /* ================================================================
    TRUTH TABLES: read from the design or the bench, edit, minimise (Quine–McCluskey) and synthesise
@@ -3695,15 +3698,15 @@ function ttExprPlain(style, pos) {
 $('#ttStyle').onchange = ttExprRender;
 
 // --- fill from the design (ideal logic; feedback loops are iterated row by row so latches keep their state)
-function ttFromDesign() {
+function designTable() {
   const ins = D.nodes.filter(n => n.t === 'sw' || n.t === 'pulse').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y || a.x - b.x);
   const outs = [];
   for (const n of D.nodes.filter(n => n.t === 'led' || n.t === 'hex').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y)) {
     if (n.t === 'led') outs.push({ n, port: 0, name: n.name || 'LED' }); else for (let i = 0; i < 4; i++) outs.push({ n, port: i, name: (n.name || 'HEX') + '.' + i });
   }
-  if (!ins.length) return ttMsg('The design has no switches or pulses to use as inputs.', true);
-  if (ins.length > 8) return ttMsg(`The design has ${ins.length} inputs; the table handles up to 8.`, true);
-  if (!outs.length) return ttMsg('The design has no LEDs or display to use as outputs.', true);
+  if (!ins.length) return { err: 'The design has no switches or pulses to use as inputs.' };
+  if (ins.length > 8) return { err: `The design has ${ins.length} inputs; the table handles up to 8.` };
+  if (!outs.length) return { err: 'The design has no LEDs or display to use as outputs.' };
   if (outs.length > 8) outs.length = 8;
   const drv = new Map(D.wires.map(w => [w.to + ':' + w.port, w.from]));
   const gates = D.nodes.filter(n => GATE_T.has(n.t)).sort((a, b) => a.x - b.x);
@@ -3727,21 +3730,26 @@ function ttFromDesign() {
   const st = new Map(); let cyc = false;
   const dfs = id => { st.set(id, 1); for (const s of succ.get(id) || []) { if (st.get(s) === 1) cyc = true; else if (!st.has(s)) dfs(s); } st.set(id, 2); };
   D.nodes.forEach(n => { if (!st.has(n.id)) dfs(n.id); });
-  TT.n = nIn; TT.m = outs.length; TT.inN = ins.map((n, i) => n.name || ABC[i]); TT.outN = outs.map(o => o.name); TT.out = out;
-  TT.note = (cyc ? 'The design has feedback, so it has memory: each row follows on from the one above it. ' : '') + (unstable ? 'Rows marked X never settled (the circuit oscillates).' : '');
+  return { n: nIn, m: outs.length, inN: ins.map((n, i) => n.name || ABC[i]), outN: outs.map(o => o.name), out,
+    note: ((cyc ? 'The design has feedback, so it has memory: each row follows on from the one above it. ' : '') + (unstable ? 'Rows marked X never settled (the circuit oscillates).' : '')).trim() };
+}
+function ttFromDesign() {
+  const t = designTable(); if (t.err) return ttMsg(t.err, true);
+  const nIn = t.n, outs = t.outN;
+  Object.assign(TT, { n: t.n, m: t.m, inN: t.inN, outN: t.outN, out: t.out, note: t.note });
   ttRender(); ttSave(); ttMsg(`Filled from the design: ${nIn} input${nIn === 1 ? '' : 's'}, ${outs.length} output${outs.length === 1 ? '' : 's'}.`);
 }
 // --- fill from the bench: step through every combination of the wired switches/pulses and read the LEDs
-function ttFromBench() {
+function ttFromBench(quiet) {
   const conn = id => T.get(id).net.terms.length > 1;
   const ins = [];
   for (let k = 1; k <= 8; k++) if (conn(`SW${k}Q`) || conn(`SW${k}N`)) ins.push({ kind: 'sw', i: k - 1, name: 'SW' + k });
   for (let k = 1; k <= 3; k++) if (conn('P' + k) || conn(`P${k}N`)) ins.push({ kind: 'p', i: k - 1, name: 'P' + k });
   const outs = []; for (let k = 0; k < 16; k++) if (LED_T[k].net.terms.length > 1) outs.push({ k, name: 'LED' + (k + 1) });
-  if (!powerOn) return ttMsg('Switch the case on (MAINS) first.', true);
-  if (!ins.length) return ttMsg('No switch or pulse is wired on the bench.', true);
-  if (ins.length > 8) return ttMsg('More than 8 inputs are wired; the table handles up to 8.', true);
-  if (!outs.length) return ttMsg('No display register LED is wired on the bench.', true);
+  if (!powerOn) return ttMsg('Switch the case on (MAINS) first.', !quiet);
+  if (!ins.length) return ttMsg('No switch or pulse is wired on the bench.', !quiet);
+  if (ins.length > 8) return ttMsg('More than 8 inputs are wired; the table handles up to 8.', !quiet);
+  if (!outs.length) return ttMsg('No display register LED is wired on the bench.', !quiet);
   if (outs.length > 8) outs.length = 8;
   const swSave = S.sw.slice(), pSave = S.pulse.slice();
   const n = ins.length, rows = 1 << n, out = [];
@@ -3754,10 +3762,10 @@ function ttFromBench() {
   const seq = modules.some(m => m.units.some(u => u.rand)) || oscillating;
   TT.n = n; TT.m = outs.length; TT.inN = ins.map(x => x.name); TT.outN = outs.map(o => o.name); TT.out = out;
   TT.note = 'Measured on the bench' + (seq ? '. The case holds chips with memory, so rows follow on from the one above them.' : '.') + (conn('CLK') || conn('CLKN') ? ' The clock was left running.' : '');
-  ttRender(); ttSave(); ttMsg(`Measured ${rows} rows on the bench and put the switches back.`);
+  ttRender(); ttSave(); ttMsg(quiet ? 'Measured on the bench: it is measured again whenever the wiring changes.' : `Measured ${rows} rows on the bench and put the switches back.`);
 }
 $('#ttFromDesign').onclick = ttFromDesign;
-$('#ttFromBench').onclick = ttFromBench;
+$('#ttFromBench').onclick = () => ttFromBench();
 $('#ttCopy').onclick = () => {
   const lines = [[...TT.inN, ...TT.outN].join('\t')];
   TT.out.forEach((row, r) => lines.push([...TT.inN.map((_, i) => r >> (TT.n - 1 - i) & 1), ...row.map(v => v === 2 ? 'X' : v)].join('\t')));
@@ -4113,7 +4121,7 @@ function diagramSVG(src) {
     dzRender(true);
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const n of D.nodes) { const g = dzGeom(n); x0 = Math.min(x0, n.x - 10); y0 = Math.min(y0, n.y - 16); x1 = Math.max(x1, n.x + g.w + 10); y1 = Math.max(y1, n.y + g.h + 60); }
-    return { svg: `<svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" xmlns="http://www.w3.org/2000/svg">${dzRoot.innerHTML}</svg>`, what: 'Gate design (Design tab). The bench was built from it.' };
+    return { svg: `<svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" xmlns="http://www.w3.org/2000/svg">${dzRoot.innerHTML}</svg>`, what: 'Gate design from the designer. The bench was built from it.' };
   }
   lvBuild();
   if (!LV.W) return null;
@@ -4196,7 +4204,7 @@ function fitSheet() {
 }
 $('#bPrint').onclick = () => {
   if (!wires.length) { toast('Nothing is wired yet, so there is nothing to print.'); return; }
-  $('#prTitle').value = benchTitle || (D.nodes.length && dzLive() ? 'Circuit from the Design tab' : 'UNILOG-2 circuit');
+  $('#prTitle').value = benchTitle || (D.nodes.length && dzLive() ? 'Circuit from the designer' : 'UNILOG-2 circuit');
   $('#mPrint').hidden = false;
 };
 $('#prGo').onclick = () => {
@@ -4206,31 +4214,207 @@ $('#prGo').onclick = () => {
   if (!fit.fits) toast('This circuit has a lot of cables, so even at the smallest readable size the sheet runs onto a second page.');
   $('#mPrint').hidden = true;
   // render the open logic view again so it isn't left showing the print copy
-  setTimeout(() => { window.print(); if (LV.open) { LV.dirty = true; if (LV.mode === 'design') dzRender(); } }, 50);
+  setTimeout(() => { window.print(); if (LV.open) { LV.dirty = true; if (LV.dz) dzRender(); } }, 50);
 };
 window.addEventListener('afterprint', () => { $('#printView').innerHTML = ''; });
 
+const readingSheet = page => camView === 'sheet:' + page;
+
 // camera views
-let camAnim = null;
+let camAnim = null, camView = 'bench';   // camView: the view goView last went to
 function viewFor(kind) {
   const asp = innerWidth / Math.max(1, innerHeight);
   const k = asp < 1 ? Math.min(2.4, 1.25 / asp) : asp < 1.4 ? 1.15 : 1;
+  if (kind.startsWith('sheet:')) {
+    // face the paper square on, close enough that the part above the pocket fills the view
+    const sh = SHEET[kind.slice(6)], s = sh.mesh, { width: pw, height: ph } = s.geometry.parameters; s.updateWorldMatrix(true, false);
+    const c = s.getWorldPosition(new THREE.Vector3()), n = new THREE.Vector3(0, 0, 1).transformDirection(s.matrixWorld);
+    const up = new THREE.Vector3(0, 1, 0).transformDirection(s.matrixWorld);
+    c.addScaledVector(up, sh.pocket / 2);
+    // a page lying flat is read from slightly in front of its foot (not from straight above), turned the way it lies
+    const flat = n.y > 0.9;
+    if (flat) n.addScaledVector(up, -0.3).normalize();
+    const t = Math.tan(camera.fov * Math.PI / 360), d = Math.max(((ph - sh.pocket) / 2 + 0.8) / t, (pw / 2 + 0.8) / (t * asp)) * (flat ? 1.08 : 1);
+    return { pos: c.clone().addScaledVector(n, d), tgt: c };
+  }
   return kind === 'top' ? { pos: new THREE.Vector3(0, 92 * k, 6), tgt: new THREE.Vector3(0, 0, 1.5) }
-                        : { pos: new THREE.Vector3(0, 56 * k, 52 * k), tgt: new THREE.Vector3(0, -1, 2.5) };
+                        : { pos: new THREE.Vector3(-4, 63 * k, 59 * k), tgt: new THREE.Vector3(-4, -2, 2.5) };   // wide enough for the rack and the pamphlet
 }
 function goView(kind, instant) {
-  const v = viewFor(kind);
+  const v = viewFor(kind); camView = kind;
   if (instant) { camera.position.copy(v.pos); controls.target.copy(v.tgt); controls.update(); return; }
   camAnim = { t: 0, p0: camera.position.clone(), t0: controls.target.clone(), p1: v.pos, t1: v.tgt };
+  controls.enabled = false;   // the user's own orbit would fight the glide
 }
+// A close-up of a page orbits around that page, which is no way to look at the bench. So orbiting, panning or
+// zooming while reading a page glides back to the bench instead.
+controls.addEventListener('start', () => { if (camView.startsWith('sheet:') && !camAnim) goView('bench'); });
+/* ================================================================
+   PAPERS: the lid sheets and the help pamphlet are real DOM pages pinned onto their 3D quads.
+   Each page is laid out at a fixed pixel size and mapped onto its mesh with a perspective (homography) transform.
+   The canvas sits above the pages and the paper meshes punch a transparent hole in it, so anything in front of
+   a page (a cable, the shut lid, the case) still covers it. Pointer events go to the canvas, except while the
+   pointer is over a visible part of a page: then the canvas lets them through to the page underneath.
+   ================================================================ */
+const PAPER = { focus: null, down: null, head: '', ttKey: '', tap: null };
+const PX_PER_CM = 1120 / 29.7;
+for (const k in SHEET) {
+  const sh = SHEET[k], { width, height } = sh.mesh.geometry.parameters;
+  sh.el = $('#' + sh.el); sh.W = Math.round(width * PX_PER_CM); sh.H = Math.round(height * PX_PER_CM); sh.m = null; sh.inv = null;
+  sh.el.style.width = sh.W + 'px'; sh.el.style.height = sh.H + 'px'; sh.el.dataset.page = k;
+  sh.mesh.userData = { kind: 'paper', page: k };
+}
+// projective map of the unit square onto the screen quad TL, TR, BR, BL (Heckbert); row-major 3×3 acting on (u, v, 1)
+function quadMatrix(q) {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+  const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3, dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+  const den = dx1 * dy2 - dx2 * dy1, g = (sx * dy2 - dx2 * sy) / den, h = (dx1 * sy - sx * dy1) / den;
+  return [x1 - x0 + g * x1, x3 - x0 + h * x3, x0, y1 - y0 + g * y1, y3 - y0 + h * y3, y0, g, h, 1];
+}
+function inv3([a, b, c, d, e, f, g, h, i]) {
+  const A = e * i - f * h, B = f * g - d * i, C = d * h - e * g, det = a * A + b * B + c * C;
+  return [A, c * h - b * i, b * f - c * e, B, a * i - c * g, c * d - a * f, C, b * g - a * h, a * e - b * d].map(x => x / det);
+}
+// Places every page over its mesh. A page that faces away or reaches behind the camera is hidden, and its mesh
+// shows as plain paper instead of a hole.
+const _pv = new THREE.Vector3(), _pn = new THREE.Vector3();
+function updatePapers() {
+  camera.updateMatrixWorld();
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  for (const k in SHEET) {
+    const sh = SHEET[k], mesh = sh.mesh, { width: pw, height: ph } = mesh.geometry.parameters;
+    mesh.updateWorldMatrix(true, false);
+    _pn.set(0, 0, 1).transformDirection(mesh.matrixWorld);
+    let ok = _pv.setFromMatrixPosition(mesh.matrixWorld).sub(camera.position).dot(_pn) < 0;
+    const q = [];
+    for (const [cx, cy] of [[-1, 1], [1, 1], [1, -1], [-1, -1]]) {
+      _pv.set(cx * pw / 2, cy * ph / 2, 0).applyMatrix4(mesh.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+      if (_pv.z > -camera.near) ok = false;
+      _pv.applyMatrix4(camera.projectionMatrix);
+      q.push([(_pv.x + 1) / 2 * w, (1 - _pv.y) / 2 * h]);
+    }
+    let m = ok ? quadMatrix(q) : null;
+    if (m && !m.every(Number.isFinite)) m = null;
+    sh.m = m; sh.inv = m && inv3(m);
+    mesh.material = m ? PUNCH : PAPER_BLANK;
+    sh.el.style.visibility = m ? '' : 'hidden';
+    if (m) sh.el.style.transform = `matrix3d(${m[0] / sh.W},${m[3] / sh.W},0,${m[6] / sh.W},${m[1] / sh.H},${m[4] / sh.H},0,${m[7] / sh.H},0,0,1,0,${m[2]},${m[5]},0,1)`;
+    sh.el.classList.toggle('reading', !!m && readingSheet(k));
+  }
+}
+// A pointer position in el's own layout pixels (el lives on a page, under its 3D transform)
+function paperPoint(el, e) {
+  const page = el.closest('.paper'), sh = SHEET[page.dataset.page], m = sh.inv;
+  if (!m) return { x: 0, y: 0 };
+  let ox = 0, oy = 0;
+  for (let n = el instanceof SVGElement ? el.parentElement : el; n && n !== page; n = n.offsetParent) { ox += n.offsetLeft; oy += n.offsetTop; }
+  const x = e.clientX, y = e.clientY, wq = m[6] * x + m[7] * y + m[8];
+  return { x: (m[0] * x + m[1] * y + m[2]) / wq * sh.W - ox, y: (m[3] * x + m[4] * y + m[5]) / wq * sh.H - oy };
+}
+// The page under the pointer ray, if nothing else is in front of it (setNDC must have run)
+function paperUnder() {
+  const hit = ray.intersectObjects(Object.values(SHEET).map(s => s.mesh), false)[0];
+  if (!hit) return null;
+  const k = hit.object.userData.page;
+  if (!SHEET[k].m || (k !== 'help' && CASE.anim)) return null;
+  ray.far = hit.distance - 0.02;
+  const blocked = ray.intersectObjects(scene.children, true).some(h => h.object.visible && h.object.material !== M.hit && h.object.material !== PUNCH);
+  ray.far = Infinity;
+  return blocked ? null : k;
+}
+const PAPER_CTRL = 'button,input,select,label,summary,textarea,a,[data-act],[data-node],[data-in],[data-out],[data-wire],.lv-e,#ttTable,.hp-nav,#dzReport';
+for (const k in SHEET) {
+  const el = SHEET[k].el;
+  // hand the pointer back to the canvas once it leaves the visible part of the page
+  el.addEventListener('pointermove', e => { if (e.buttons) return; setNDC(e); if (paperUnder() !== k) canvas.style.pointerEvents = ''; });
+  el.addEventListener('pointerleave', e => { if (!e.buttons) canvas.style.pointerEvents = ''; });
+  el.addEventListener('pointerdown', e => {
+    PAPER.focus = k;
+    if (e.button !== 0) {   // right and middle drags orbit and pan the camera, as anywhere else
+      e.preventDefault(); canvas.style.pointerEvents = '';
+      canvas.dispatchEvent(new PointerEvent('pointerdown', e));
+      return;
+    }
+    PAPER.down = { x: e.clientX, y: e.clientY };
+  });
+  // a click on the blank part of a page brings it up to read; a click on its heading puts it back
+  el.addEventListener('click', e => {
+    const d = PAPER.down; PAPER.down = null;
+    if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return;
+    const head = e.target.closest('.ph');
+    if (!head && e.target.closest(PAPER_CTRL)) return;
+    if (!readingSheet(k)) goView('sheet:' + k); else if (head) goView('bench');
+  });
+  el.addEventListener('wheel', e => {
+    const sc = e.target.closest('.tt-wrap,.tt-expr,#dzReport');
+    if (sc && sc.scrollHeight > sc.clientHeight) return;   // long tables and reports scroll on the page
+    e.preventDefault(); canvas.dispatchEvent(new WheelEvent('wheel', e));
+  }, { passive: false });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+canvas.addEventListener('pointerdown', e => {
+  PAPER.focus = null;
+  PAPER.tap = e.pointerType !== 'mouse' && e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
+});
+// Touch has no hover to hand the pointer over, so a tap on a page is passed on to whatever it landed on.
+canvas.addEventListener('pointerup', e => {
+  const t = PAPER.tap; PAPER.tap = null;
+  if (!t || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 8) return;
+  setNDC(e); if (!paperUnder()) return;
+  canvas.style.pointerEvents = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  canvas.style.pointerEvents = '';
+  if (!el || !el.closest('.paper')) return;
+  const o = { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 0, pointerId: e.pointerId, pointerType: e.pointerType, isPrimary: true };
+  el.dispatchEvent(new PointerEvent('pointerdown', { ...o, buttons: 1 }));
+  el.dispatchEvent(new PointerEvent('pointerup', o));
+  el.dispatchEvent(new MouseEvent('click', o));
+});
+
+// help pamphlet: the text flows into page-wide columns, and the pamphlet shows one of them at a time
+const HP = { page: 0, n: 1 };
+function hpShow(i) {
+  const body = $('#pHelp .hp-body'), cols = $('#pHelp .hp-cols'), gap = 52, w = body.clientWidth;
+  cols.style.width = w + 'px'; cols.style.columnWidth = w + 'px';
+  HP.n = Math.max(1, Math.round((body.scrollWidth + gap) / (w + gap)));
+  HP.page = Math.max(0, Math.min(HP.n - 1, i));
+  body.scrollLeft = HP.page * (w + gap);
+  $('#hpNum').textContent = `Page ${HP.page + 1} of ${HP.n}`;
+  $('#hpPrev').disabled = HP.page === 0; $('#hpNext').disabled = HP.page === HP.n - 1;
+}
+$('#hpPrev').onclick = () => hpShow(HP.page - 1);
+$('#hpNext').onclick = () => hpShow(HP.page + 1);
+hpShow(0);
+if (document.fonts) document.fonts.ready.then(() => hpShow(HP.page));
+
+// circuits with memory (flip-flops, or feedback in the wiring) aren't measured automatically: stepping the switches
+// would change what a latch or counter holds
+function benchHasMemory() {
+  if (LV.dirty) lvBuild();
+  return LV.fb || modules.some(m => m.units.some(u => u.rand) && wires.some(w => wireTouches(w, m)));
+}
+function paperTick() {
+  const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }), head = benchTitle + '|' + date;
+  if (head !== PAPER.head) {
+    PAPER.head = head;
+    for (const k of ['diag', 'tt']) { SHEET[k].el.querySelector('.ph-t').textContent = benchTitle || 'UNILOG-2 circuit'; SHEET[k].el.querySelector('.ph-d').textContent = date; }
+  }
+  // the truth table sheet re-measures a hand-wired bench whenever the wiring or the power changes
+  const tk = benchVersion + '|' + powerOn;
+  if (tk !== PAPER.ttKey) {
+    PAPER.ttKey = tk;
+    if (wires.length && !dzLive()) { if (benchHasMemory()) ttMsg('This circuit has memory, so the table is not measured automatically. Press Bench to record it row by row.'); else ttFromBench(true); }
+  }
+}
+ttRender();
+
 $('#vBench').onclick = () => goView('bench');
 $('#vTop').onclick = () => goView('top');
 
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); invalidate();
-  lvViewOffset();
-  if (LV.open && LV.autoFit) lvFit();
+  lvFit();
 }
 window.addEventListener('resize', resize); resize();
 
@@ -4268,15 +4452,17 @@ function frame(now) {
   if (s + st !== statusStr) { statusStr = s + st; const el = $('#status'); el.className = 'pill' + (st === 'on' ? ' on' : st === 'fault' ? ' fault' : ''); el.lastChild.textContent = s; }
   if (scope.open && (scopeTick++ % 2 === 0)) drawScope();
   if (LV.open) lvFrame();
+  paperTick();
   stepLid(dt);
   if (camAnim) {
     camAnim.t = Math.min(1, camAnim.t + dt / 0.6); const e = 1 - Math.pow(1 - camAnim.t, 3);
     camera.position.lerpVectors(camAnim.p0, camAnim.p1, e); controls.target.lerpVectors(camAnim.t0, camAnim.t1, e);
-    if (camAnim.t >= 1) camAnim = null;
+    if (camAnim.t >= 1) { camAnim = null; controls.enabled = true; }
     dirty = true;
   }
   if (controls.update()) dirty = true;
   if (dirty) {
+    updatePapers();
     if (shadowDirty && renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
     shadowDirty = false; dirty = false;
     renderer.render(scene, camera);
