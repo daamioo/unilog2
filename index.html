@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, inspector right, scope bottom-right); the module rack is on the table in 3D. */
+/* Layout: full-bleed 3D bench; thin instrument-style chrome floats at the edges (bar top, inspector right); the module rack, help pamphlet and oscilloscope are on the table in 3D. */
 :root{
   --bg:#141619; --panel:#1c1f23; --panel-2:#252930; --line:#343a42; --fg:#e7e4da; --muted:#9b9d97;
   --accent:#d3a24a; --accent-ink:#1b1408; --hi:#ff4d3d; --lo:#37c96a; --float:#8fa3c4; --warn:#ffb020;
@@ -69,11 +69,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 #dock{left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;padding:8px 12px;flex-wrap:wrap;right:auto;max-width:calc(100% - 24px)}
 #dock .lbl{font-family:var(--f-display);letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--muted)}
 
-#scope{right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(430px,calc(100% - 24px));padding:10px}
-#scope header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-#scope header h2{margin-right:auto}
-#scv{width:100%;aspect-ratio:2/1;display:block;border-radius:6px;background:#0b1410;max-width:100%}
-#scope footer{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:6px;gap:8px;flex-wrap:wrap}
 .ca{color:#f4d03f}.cb{color:#5fd3f3}
 
 #tip{position:fixed;z-index:8;pointer-events:none;background:#0f1114;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px;max-width:280px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
@@ -380,7 +375,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li><b>Pulse</b>: 3 momentary buttons with ⊓ (HIGH while held) and ⊔ (LOW while held) outputs.</li>
       <li><b>Clock</b>: pick 1 Hz, 1 kHz or 1 MHz. CAL trims the rate (drag it or use the scroll wheel). 1 MHz runs in slow motion so the simulation can keep up.</li>
       <li><b>Display</b>: segment inputs a–g and DP are active-high. If any of the 2⁰–2³ inputs is wired, the built-in decoder shows that hex digit.</li>
-      <li><b>Oscilloscope</b>: wire a signal to the A or B pin next to the BNC sockets, then open the scope window.</li>
+      <li><b>Oscilloscope</b>: wire a signal to the A or B pin next to the BNC sockets. They are cabled to the scope on the table behind this pamphlet. Press its red <b>POWER</b> button (or click a BNC socket on the case) to switch it on, and click its screen to look at it up close. The <b>TIME / DIV</b> knob sets the sweep: click for slower, Shift+click for faster, or scroll over it. <b>TRIG</b> switches between triggering on a rising edge of A and a free-running roll.</li>
     </ul>
     <h3>The sheets in the lid</h3>
     <ul>
@@ -427,7 +422,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
     <button id="bClear">Clear wires</button>
     <button id="bOpt" title="Shorten the cable runs: rearranges modules and equivalent gates, then re-lays the cables. The circuit stays the same.">Optimize</button>
     <button id="bLogic" aria-pressed="false" title="Logic view (L)">Logic view</button>
-    <button id="bScope" aria-pressed="false">Oscilloscope</button>
     <button id="bSave">Save / load</button>
     <button id="bPrint" title="Print a lab sheet: case layout, truth table, logic diagram and a numbered wiring list">Print</button>
     <button id="bSet" aria-pressed="false">Settings</button>
@@ -466,20 +460,6 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 
 
 
-<section id="scope" class="float" hidden>
-  <header>
-    <h2>Oscilloscope</h2>
-    <select id="tdiv" aria-label="Time per division">
-      <option value="1e-6">1 µs/div</option><option value="1e-5">10 µs/div</option><option value="1e-4">100 µs/div</option>
-      <option value="1e-3">1 ms/div</option><option value="1e-2">10 ms/div</option><option value="0.1">100 ms/div</option>
-      <option value="0.5" selected>0.5 s/div</option>
-    </select>
-    <select id="trig" aria-label="Trigger"><option value="a">Trig A ↑</option><option value="roll">Roll</option></select>
-    <button id="scClose" aria-label="Close oscilloscope">Close</button>
-  </header>
-  <canvas id="scv" width="840" height="420"></canvas>
-  <footer><span><span class="ca">A</span> <span id="scA">not connected</span></span><span><span class="cb">B</span> <span id="scB">not connected</span></span></footer>
-</section>
 
 <div id="tip" hidden></div>
 <div id="toasts" aria-live="polite"></div><div id="printView" aria-hidden="true"></div>
@@ -913,7 +893,7 @@ function buildCase() {
   paper(SHEET.diag, 29.7, 21, -11, 24.5, -0.012);
   paper(SHEET.tt, 21, 29.7, 15.6, 28.85, 0.018);
   // the help pamphlet lies on the table to the right of the case, on top of a few pages' worth of thickness
-  const pam = new THREE.Group(); pam.position.set(44, -6.6, 10); pam.rotation.y = -0.16; scene.add(pam);
+  const pam = new THREE.Group(); pam.position.set(45, -6.6, 13); pam.rotation.y = -0.16; scene.add(pam);
   box(14.8, 0.18, 21, new THREE.MeshStandardMaterial({ color: 0xd9d3c3, roughness: 0.9 }), 0, 0.09, 0, pam);
   const hp = new THREE.Mesh(new THREE.PlaneGeometry(14.8, 21), PUNCH);
   hp.rotation.x = -Math.PI / 2; hp.position.y = 0.185; pam.add(hp); SHEET.help.mesh = hp;
@@ -976,6 +956,7 @@ CASE.latchMeshes.forEach(m => addPick(m, { kind: 'latch' }));
 function setWiresVisible(v) {
   CASE.wiresVis = v;
   for (const w of wires) w.tube.visible = w.ha.visible = w.hb.visible = v;
+  for (const c of SCOPE.coax) c.visible = v;   // the scope cables leave the case through where the lid closes
   invalidate(true);
 }
 function toggleLid() {
@@ -1714,13 +1695,17 @@ function pruneScope(L) {
   let i = 0; while (i < buf.length - 1 && buf[i + 1].t < lim) i++;
   if (i > 0) buf.splice(0, i);
 }
-const scv = $('#scv'), sg2 = scv.getContext('2d');
+// time/div steps of the TIME/DIV knob
+const TDIVS = [[1e-6, '1 µs'], [1e-5, '10 µs'], [1e-4, '100 µs'], [1e-3, '1 ms'], [1e-2, '10 ms'], [0.1, '100 ms'], [0.5, '0.5 s']];
+const SC = { div: 6, trig: 'a' };   // div: index into TDIVS
+const scv = document.createElement('canvas'); scv.width = 840; scv.height = 420;
+const sg2 = scv.getContext('2d');
 function drawScope() {
-  const div = parseFloat($('#tdiv').value), L = div * 10, W = scv.width, Hh = scv.height;
+  const div = TDIVS[SC.div][0], L = div * 10, W = scv.width, Hh = scv.height;
   pruneScope(L);
   const buf = scope.buf;
   let start = simT - L;
-  if ($('#trig').value === 'a') {
+  if (SC.trig === 'a') {
     for (let i = buf.length - 1; i > 0; i--) {
       const e = buf[i];
       if (e.a === 1 && buf[i - 1].a !== 1 && e.t - div + L <= simT) { start = e.t - div; break; }
@@ -1750,10 +1735,105 @@ function drawScope() {
     sg2.stroke(); sg2.shadowBlur = 0;
   };
   trace('a', Hh * 0.43, '#f4d03f'); trace('b', Hh * 0.93, '#5fd3f3');
-  sg2.fillStyle = 'rgba(200,230,210,.55)'; sg2.font = '20px "IBM Plex Mono", monospace';
-  sg2.fillText($('#tdiv').selectedOptions[0].text + (slowMo ? '  · slow motion' : ''), 12, 26);
+  // readouts, drawn on the screen the way a real scope prints them
   const txt = s => s === null ? 'not connected' : s === 1 ? 'HIGH' : s === 0 ? 'LOW' : s < 0 ? 'CONFLICT' : 'floating';
-  $('#scA').textContent = txt(scope.lastA); $('#scB').textContent = txt(scope.lastB);
+  sg2.font = '22px "IBM Plex Mono", monospace'; sg2.fillStyle = 'rgba(200,230,210,.6)';
+  sg2.textAlign = 'left'; sg2.fillText(`${TDIVS[SC.div][1]}/div${slowMo ? '  · slow motion' : ''}`, 14, 30);
+  sg2.textAlign = 'right'; sg2.fillText(SC.trig === 'a' ? 'TRIG A ↑' : 'ROLL', W - 14, 30);
+  sg2.textAlign = 'left'; sg2.fillStyle = '#f4d03f'; sg2.fillText(`A ${txt(scope.lastA)}`, 14, Hh - 14);
+  sg2.textAlign = 'right'; sg2.fillStyle = '#5fd3f3'; sg2.fillText(`B ${txt(scope.lastB)}`, W - 14, Hh - 14);
+  sg2.textAlign = 'left';
+  SCOPE.tex.needsUpdate = true; invalidate();
+}
+function scopeBlank() { sg2.fillStyle = '#060908'; sg2.fillRect(0, 0, scv.width, scv.height); SCOPE.tex.needsUpdate = true; invalidate(); }
+
+/* ================================================================
+   OSCILLOSCOPE: a benchtop scope on the table behind the help pamphlet, cabled to the case's BNC sockets
+   ================================================================ */
+const SCOPE = { tex: null, group: null, knob: null, trigBtn: null, lamp: null, coax: [], screen: null, front: null };
+function buildScope() {
+  const W = 24, Hd = 15, D = 22, g = new THREE.Group();
+  // resting on its rear feet, front tipped up on a stand so the screen faces the bench; turned a little towards the case
+  const tilt = 0.24, k = 0.8;   // k: a benchtop scope is a bit smaller than the case
+  g.rotation.set(-tilt, -0.5, 0, 'YXZ'); g.scale.setScalar(k); g.position.set(48, -6.6 + k * (0.4 + (D / 2) * Math.sin(tilt)), -13); scene.add(g); SCOPE.group = g;
+  const shell = new THREE.MeshStandardMaterial({ color: 0x8e979b, roughness: 0.55, metalness: 0.15 });
+  box(W, Hd, D, shell, 0, Hd / 2, 0, g);
+  for (const x of [-W / 2 + 2, W / 2 - 2]) box(1.6, 0.4, 1.6, M.rubber, x, -0.2, -D / 2 + 1.5, g);
+  g.updateMatrixWorld(true);
+  for (const x of [-W / 2 + 1.2, W / 2 - 1.2]) {   // stand legs, straight down from under the front to the table
+    const top = g.localToWorld(new THREE.Vector3(x, 0, D / 2 - 2)), len = top.y + 6.6;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, len, 12), M.chrome);
+    leg.position.set(top.x, top.y - len / 2, top.z); leg.castShadow = true; scene.add(leg);
+  }
+  // front panel: labels and scales are painted on
+  const S = 42, face = canvasTex(W * S, Hd * S, c => {
+    c.fillStyle = '#2b3033'; c.fillRect(0, 0, W * S, Hd * S);
+    noise(c, W * S, Hd * S, 4000, 0.04);
+    c.fillStyle = '#111'; c.fillRect(0.8 * S, 1.0 * S, 14.8 * S, 7.8 * S);   // screen bezel
+    c.fillStyle = '#d9d4c3'; c.textBaseline = 'middle'; c.textAlign = 'left';
+    c.font = `700 ${0.75 * S}px "Barlow Condensed", Arial, sans-serif`; c.fillText('UNILOG  OS-2', 0.9 * S, 10.1 * S);
+    c.font = `500 ${0.5 * S}px "Barlow Condensed", Arial, sans-serif`; c.fillStyle = '#a9a594'; c.fillText('2-CHANNEL LOGIC OSCILLOSCOPE', 0.9 * S, 10.9 * S);
+    c.textAlign = 'center'; c.fillStyle = '#d9d4c3'; c.font = `600 ${0.5 * S}px "Barlow Condensed", Arial, sans-serif`;
+    c.fillText('TIME / DIV', 19.7 * S, 7.9 * S);
+    // scale around the knob
+    TDIVS.forEach(([, l], i) => {
+      const a = (-135 + i * 45) * Math.PI / 180, r = 3.1 * S;
+      c.font = `500 ${0.42 * S}px "IBM Plex Mono", monospace`;
+      c.fillText(l.replace(' ', ''), 19.7 * S + Math.sin(a) * r, 4.4 * S - Math.cos(a) * r);
+    });
+    c.font = `600 ${0.5 * S}px "Barlow Condensed", Arial, sans-serif`;
+    c.fillText('TRIG A↑ / ROLL', 17.5 * S, 10.4 * S); c.fillText('POWER', 21.9 * S, 10.4 * S);
+    c.fillStyle = '#f4d03f'; c.fillText('CH A', 17.5 * S, 14.4 * S); c.fillStyle = '#5fd3f3'; c.fillText('CH B', 21.9 * S, 14.4 * S);
+  });
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(W, Hd), new THREE.MeshStandardMaterial({ map: face, roughness: 0.6 }));
+  front.position.set(0, Hd / 2, D / 2 + 0.01); g.add(front); SCOPE.front = front;
+  const at = (u, v, z = D / 2) => new THREE.Vector3(u - W / 2, Hd - v, z);   // panel coordinates (from its top left) to the scope's own
+  // the screen glows by itself, so it ignores the room light
+  SCOPE.tex = new THREE.CanvasTexture(scv); SCOPE.tex.encoding = THREE.sRGBEncoding; SCOPE.tex.anisotropy = MAX_ANISO;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(14, 7), new THREE.MeshBasicMaterial({ map: SCOPE.tex, toneMapped: false }));
+  screen.position.copy(at(8.2, 4.9, D / 2 + 0.03)); g.add(screen); SCOPE.screen = screen;
+  addPick(screen, { kind: 'scscreen' });
+  // TIME/DIV knob
+  const kn = new THREE.Group(); kn.position.copy(at(19.7, 4.4)); g.add(kn); SCOPE.knob = kn;
+  const kb = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.65, 1.2, 32), M.rubber); kb.rotation.x = Math.PI / 2; kb.position.z = 0.6; kb.castShadow = true; kn.add(kb);
+  box(0.2, 1.1, 0.1, new THREE.MeshStandardMaterial({ color: 0xeeeeee }), 0, 0.85, 1.22, kn, false);
+  addPick(kb, { kind: 'tdiv' });
+  // TRIG and POWER push buttons, and the power lamp
+  SCOPE.trigBtn = box(1.8, 1.2, 0.8, new THREE.MeshStandardMaterial({ color: 0xd9d4c3, roughness: 0.5 }), 0, 0, 0, g);
+  SCOPE.trigBtn.position.copy(at(17.5, 9.2, D / 2 + 0.4)); addPick(SCOPE.trigBtn, { kind: 'trig' });
+  const pw = box(1.8, 1.2, 0.8, new THREE.MeshStandardMaterial({ color: 0xb8442f, roughness: 0.5 }), 0, 0, 0, g);
+  pw.position.copy(at(21.9, 9.2, D / 2 + 0.4)); addPick(pw, { kind: 'scpower' });
+  SCOPE.lamp = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 10), new THREE.MeshStandardMaterial({ color: 0x3a1512, emissive: 0xff3020, emissiveIntensity: 0 }));
+  SCOPE.lamp.position.copy(at(23.2, 9.2, D / 2 + 0.1)); g.add(SCOPE.lamp);
+  // input sockets. The cable to the case's BNC sockets is only hinted at: a short stub leaves each socket, at both
+  // ends, and fades out, so the link reads without a thick cable across the table.
+  const fade = canvasTex(256, 4, c => { const gr = c.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0, '#fff'); gr.addColorStop(0.45, '#fff'); gr.addColorStop(1, '#000'); c.fillStyle = gr; c.fillRect(0, 0, 256, 4); });
+  fade.encoding = THREE.LinearEncoding;
+  const coaxMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: 0.55, alphaMap: fade, transparent: true, depthWrite: false });
+  const stub = pts => { const t = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.32, 8), coaxMat); scene.add(t); SCOPE.coax.push(t); };
+  [[17.5, 24.4], [21.9, 28.1]].forEach(([u, caseX]) => {
+    const p = at(u, 12.9, D / 2), bnc = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.0, 20), M.chrome);
+    bnc.rotation.x = Math.PI / 2; bnc.position.set(p.x, p.y, p.z + 0.5); g.add(bnc);
+    g.updateMatrixWorld(true);
+    // out of the scope's socket, drooping towards the table
+    stub([g.localToWorld(new THREE.Vector3(p.x, p.y, p.z + 1.4)), g.localToWorld(new THREE.Vector3(p.x, p.y - 0.6, p.z + 3.4)), g.localToWorld(new THREE.Vector3(p.x, p.y - 2.6, p.z + 5.2))]);
+    // up out of the case's socket, heading for the scope
+    stub([new THREE.Vector3(caseX, PANEL_TOP + 1, 19.9), new THREE.Vector3(caseX + 0.4, 3.2, 19.7), new THREE.Vector3(caseX + 1.8, 5.0, 19.0)]);
+  });
+  scopeBlank();
+}
+buildScope();
+function scopeStep(d) {
+  SC.div = Math.max(0, Math.min(TDIVS.length - 1, SC.div + d));
+  SCOPE.knob.rotation.z = -(-135 + SC.div * 45) * Math.PI / 180; invalidate(true);
+}
+function scopeControl(kind, e) {
+  if (kind === 'tdiv') scopeStep(e && e.shiftKey ? -1 : 1);
+  else if (kind === 'trig') { SC.trig = SC.trig === 'a' ? 'roll' : 'a'; toast(SC.trig === 'a' ? 'Trigger on a rising edge of channel A.' : 'Roll mode: the trace runs freely.'); }
+  else if (kind === 'scpower') toggleScope();
+  else if (kind === 'scscreen') goView(camView === 'scope' ? 'bench' : 'scope');
+  if (!scope.open) return;
+  drawScope();
 }
 
 /* ================================================================
@@ -2203,7 +2283,7 @@ function pressControl(ud) {
   else if (ud.kind === 'range') { S.range = ud.i; resetClock(); syncPanelVisuals(); save(); toast(`Clock set to ${['1 Hz', '1 kHz', '1 MHz'][ud.i]}${ud.i === 2 ? '. It runs in slow motion: the LEDs glow at half brightness and the scope shows the real waveform.' : '.'}`); }
   else if (ud.kind === 'mains') { S.mains = !S.mains; syncPanelVisuals(); refresh(); save(); }
   else if (ud.kind === 'probe') toast('The logic probe is built into the pointer. Hover any pin to read its level.');
-  else if (ud.kind === 'bnc') toggleScope(true);
+  else if (ud.kind === 'bnc') { toggleScope(true); goView('scope'); }
   else if (ud.kind === 'latch') toggleLid();
 }
 function releasePulse(i) { S.pulse[i] = 0; syncPanelVisuals(); refresh(); }
@@ -2223,7 +2303,11 @@ function controlTip(ud) {
     case 'knob': return `<div class="t">CAL: ${fmtHz(freq())}</div><div class="k">Drag or scroll to trim the rate (×${calFactor().toFixed(2)})</div>`;
     case 'mains': return `<div class="t">MAINS ${S.mains ? 'ON' : 'OFF'}</div><div class="k">Click to switch the case ${S.mains ? 'off' : 'on'}</div>`;
     case 'probe': return `<div class="t">Probe socket</div><div class="k">Hover any pin to read its level</div>`;
-    case 'bnc': return `<div class="t">Oscilloscope input ${ud.ch}</div><div class="k">Wire a signal to the pin beside it. Click to open the scope.</div>`;
+    case 'bnc': return `<div class="t">Oscilloscope input ${ud.ch}</div><div class="k">Wire a signal to the pin beside it. It is cabled to the scope on the table: click to switch it on and look at it.</div>`;
+    case 'tdiv': return `<div class="t">TIME / DIV: ${TDIVS[SC.div][1]}</div><div class="k">Click for a slower sweep, Shift+click for a faster one, or scroll</div>`;
+    case 'trig': return `<div class="t">Trigger: ${SC.trig === 'a' ? 'rising edge of A' : 'roll'}</div><div class="k">Click to switch</div>`;
+    case 'scpower': return `<div class="t">Oscilloscope POWER: ${scope.open ? 'on' : 'off'}</div><div class="k">Click to switch it ${scope.open ? 'off' : 'on'}</div>`;
+    case 'scscreen': return `<div class="t">Oscilloscope screen</div><div class="k">Click to ${camView === 'scope' ? 'step back' : 'look at it up close'}</div>`;
     case 'rack': return `<div class="t">${ud.type} · ${CHIPS[ud.type].desc}</div><div class="k">Drag onto a slot to fit it, or click to drop it in the first free slot</div>`;
     case 'latch': return `<div class="t">Case latch</div><div class="k">Click to ${CASE.open ? 'close' : 'open'} the case</div>`;
     case 'module': return `<div class="t">${ud.m.type} · ${ud.m.def.desc}</div><div class="k">Click for the pinout. Drag to move it, R to turn it.</div>`;
@@ -2245,6 +2329,7 @@ canvas.addEventListener('pointerdown', e => {
   if (ud && !wiring) {
     if (ud.kind === 'switch' || ud.kind === 'range' || ud.kind === 'mains' || ud.kind === 'probe' || ud.kind === 'bnc' || ud.kind === 'latch') { pressControl(ud); ptr.down = null; return; }
     if (ud.kind === 'rack') { startPlacing(ud.type, e); ptr.down = null; return; }
+    if (ud.kind === 'tdiv' || ud.kind === 'trig' || ud.kind === 'scpower' || ud.kind === 'scscreen') { scopeControl(ud.kind, e); ptr.down = null; return; }
     if (ud.kind === 'pulse') { pressControl(ud); ptr.mode = 'pulse'; ptr.pulse = ud.i; }
     if (ud.kind === 'knob') { ptr.mode = 'knob'; ptr.cal0 = S.cal; }
   }
@@ -2333,6 +2418,10 @@ canvas.addEventListener('dblclick', e => {
 window.addEventListener('wheel', e => {
   if (e.target !== canvas) return;
   setNDC(e); const hit = pick();
+  if (hit && hit.object.userData.kind === 'tdiv') {
+    e.preventDefault(); e.stopPropagation();
+    scopeStep(e.deltaY > 0 ? 1 : -1); if (scope.open) drawScope(); showTip(e.clientX, e.clientY, controlTip({ kind: 'tdiv' }));
+  }
   if (hit && hit.object.userData.kind === 'knob') {
     e.preventDefault(); e.stopPropagation();
     S.cal = Math.max(0, Math.min(1, S.cal - Math.sign(e.deltaY) * 0.03));
@@ -2347,7 +2436,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (wiring) cancelWiring(false); else select(null);
     document.querySelectorAll('.modal').forEach(m => m.hidden = true);
-    if (['diag', 'tt', 'help'].some(readingSheet)) goView('bench');
+    if (['diag', 'tt', 'help'].some(readingSheet) || camView === 'scope') goView('bench');
     return;
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -2382,15 +2471,15 @@ function toggleScope(force) {
   const wasOpen = scope.open;
   scope.open = force != null ? force : !scope.open;
   if (scope.open && !wasOpen) { scope.buf = []; scope.lastA = scope.lastB = undefined; scopeSample(simT); }
-  $('#scope').hidden = !scope.open; $('#bScope').setAttribute('aria-pressed', String(scope.open));
-  if (scope.open) {
-    const f = freq(), div = 1 / f / 4;
-    const opts = [...$('#tdiv').options].map(o => +o.value);
-    $('#tdiv').value = String(opts.reduce((a, b) => Math.abs(Math.log(b / div)) < Math.abs(Math.log(a / div)) ? b : a));
+  SCOPE.lamp.material.emissiveIntensity = scope.open ? 2.4 : 0; SCOPE.lamp.material.color.setHex(scope.open ? 0xff5a46 : 0x3a1512);
+  if (scope.open && !wasOpen) {
+    // switching on picks the time base that shows about four clock periods
+    const div = 1 / freq() / 4;
+    let best = 0; TDIVS.forEach(([v], i) => { if (Math.abs(Math.log(v / div)) < Math.abs(Math.log(TDIVS[best][0] / div))) best = i; });
+    scopeStep(best - SC.div); drawScope();
   }
+  if (!scope.open) scopeBlank();
 }
-$('#bScope').onclick = () => toggleScope();
-$('#scClose').onclick = () => toggleScope(false);
 $('#bSet').onclick = () => { const s = $('#settings'); s.hidden = !s.hidden; $('#bSet').setAttribute('aria-pressed', String(!s.hidden)); if (!s.hidden) $('#info').hidden = true; };
 $('#optPost').onchange = e => { S.autoPower = e.target.checked; rebuild(); save(); toast(S.autoPower ? 'Shortcut on: every module is powered without power cables.' : 'Modules are unpowered until their +5V and 0V pins are cabled to the rail. "Wire power" in the inspector does it for you.'); };
 $('#optLevels').onchange = e => { S.levels = e.target.checked; for (const w of wires) w.glow = ''; };
@@ -4225,9 +4314,9 @@ let camAnim = null, camView = 'bench';   // camView: the view goView last went t
 function viewFor(kind) {
   const asp = innerWidth / Math.max(1, innerHeight);
   const k = asp < 1 ? Math.min(2.4, 1.25 / asp) : asp < 1.4 ? 1.15 : 1;
-  if (kind.startsWith('sheet:')) {
-    // face the paper square on, close enough that the part above the pocket fills the view
-    const sh = SHEET[kind.slice(6)], s = sh.mesh, { width: pw, height: ph } = s.geometry.parameters; s.updateWorldMatrix(true, false);
+  if (kind.startsWith('sheet:') || kind === 'scope') {
+    // face the paper (or the scope's front) square on, close enough that the part above the pocket fills the view
+    const sh = kind === 'scope' ? { mesh: SCOPE.front, pocket: 0 } : SHEET[kind.slice(6)], s = sh.mesh, { width: pw, height: ph } = s.geometry.parameters; s.updateWorldMatrix(true, false);
     const c = s.getWorldPosition(new THREE.Vector3()), n = new THREE.Vector3(0, 0, 1).transformDirection(s.matrixWorld);
     const up = new THREE.Vector3(0, 1, 0).transformDirection(s.matrixWorld);
     c.addScaledVector(up, sh.pocket / 2);
@@ -4248,7 +4337,7 @@ function goView(kind, instant) {
 }
 // A close-up of a page orbits around that page, which is no way to look at the bench. So orbiting, panning or
 // zooming while reading a page glides back to the bench instead.
-controls.addEventListener('start', () => { if (camView.startsWith('sheet:') && !camAnim) goView('bench'); });
+controls.addEventListener('start', () => { if ((camView.startsWith('sheet:') || camView === 'scope') && !camAnim) goView('bench'); });
 /* ================================================================
    PAPERS: the lid sheets and the help pamphlet are real DOM pages pinned onto their 3D quads.
    Each page is laid out at a fixed pixel size and mapped onto its mesh with a perspective (homography) transform.
