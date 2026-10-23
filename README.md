@@ -15,7 +15,7 @@ The case has its 12 slots and the modules from the lab: 7400, 7402, 7404, 7410, 
 The rest of the bench is around the case:
 
 - the module rack on the left, where you drag chips from
-- two sheets in the lid: the logic diagram of whatever you wired (or a designer that builds a circuit from gates for you) and the truth table
+- two sheets in the lid: the logic view, which draws whatever you wired as gates you can edit and build back onto the case, and the truth table
 - the lab manual, with the help and a datasheet for every chip
 - an oscilloscope
 - a floppy drive for saving and loading, the example circuits on floppies next to it, and a little printer that prints a wiring list you can follow on the real case
@@ -35,8 +35,10 @@ It works from the keyboard too. Tab into the bench, move with Tab or the arrow k
 | [ / ] | cable colour |
 | R | turn a module |
 | + / − | turn the selected knob |
-| L / T / H / O | logic diagram / truth table / manual / oscilloscope |
-| B or Esc | back to the bench |
+| L / T | logic view / truth table on the screen |
+| H / O | manual / oscilloscope |
+| Esc | back from a close-up |
+| B | default bench view |
 | P | print |
 | Ctrl+S / Ctrl+O | save / load a file |
 | Ctrl+Z | undo |
