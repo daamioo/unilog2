@@ -38,7 +38,7 @@ It works from the keyboard too. Tab into the bench, move with Tab or the arrow k
 | + / − | turn the selected knob |
 | L / T | logic view / truth table on the screen |
 | H / O | manual / oscilloscope |
-| Esc | back from a close-up |
+| Esc | close what you opened last (twice for the wiring guide) |
 | B | default bench view |
 | W | wiring guide |
 | ← / → | wiring guide: back / next cable |

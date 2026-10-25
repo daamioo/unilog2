@@ -51,18 +51,21 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .pill.fault i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
 
 .float{position:fixed;z-index:4;background:rgba(28,31,35,.94);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-#info{right:max(12px,env(safe-area-inset-right,0px));top:64px;width:300px;max-height:calc(100% - 150px);overflow:auto;padding:14px}
+/* --rp: the room the logic view panel takes on the right while it is open; the other panels keep clear of it */
+:root{--rp:0px}
+body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
+#info{right:calc(max(12px,env(safe-area-inset-right,0px)) + var(--rp));top:64px;width:300px;max-height:calc(100% - 150px);overflow:auto;padding:14px}
 #info .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 #info .sub{color:var(--muted);margin:2px 0 10px}
 .float h2{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;margin:0}
 
 .ov{text-decoration:overline}
 
-#guide{left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));padding:12px 14px;z-index:5}
+#guide{left:calc((100% - var(--rp)) / 2);transform:translateX(-50%);bottom:var(--gb,calc(12px + env(safe-area-inset-bottom,0px)));width:min(560px,calc(100% - var(--rp) - 24px));padding:12px 14px;z-index:5}
 #guide header{display:flex;align-items:center;gap:10px}
 #guide header .grow,#guide .g-row .grow{flex:1}
 #gCount{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
-#gClose{padding:2px 9px}
+#gClose,.xbtn{padding:2px 9px}
 .g-bar{height:4px;background:var(--panel-2);border-radius:2px;margin:9px 0 10px;overflow:hidden}
 .g-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
 .g-grp{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--f-display)}
@@ -90,7 +93,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 #tip .lamp{width:10px;height:10px;border-radius:50%;display:inline-block}
 #tip .k{color:var(--muted);font-size:11.5px;margin-top:3px}
 
-#toasts{position:fixed;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(560px,calc(100% - 32px))}
+#toasts{position:fixed;z-index:9;left:calc((100% - var(--rp)) / 2);transform:translateX(-50%);bottom:var(--tb,calc(76px + env(safe-area-inset-bottom,0px)));display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(560px,calc(100% - var(--rp) - 32px))}
 .toast{background:#0f1114;border:1px solid var(--line);border-left:3px solid var(--accent);padding:8px 12px;border-radius:7px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.45);animation:tin .2s ease-out}
 .toast.bad{border-left-color:var(--hi)}
 @keyframes tin{from{transform:translateY(6px);opacity:.3}to{transform:none;opacity:1}}
@@ -104,7 +107,8 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 .modal kbd{font-family:var(--f-mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
 .modal textarea{width:100%;min-height:180px;background:#101215;border:1px solid var(--line);border-radius:8px;padding:8px;font-family:var(--f-mono);font-size:12px;resize:vertical}
 .modal .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
-#settings{right:max(12px,env(safe-area-inset-right,0px));top:64px;width:290px;padding:14px;display:flex;flex-direction:column;gap:10px}
+#settings{right:max(12px,env(safe-area-inset-right,0px));top:64px;width:290px;max-height:calc(100% - 76px);overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;z-index:7}
+#settings header{display:flex;align-items:center;justify-content:space-between}
 #settings label{display:flex;gap:10px;align-items:flex-start;line-height:1.35;cursor:pointer}
 #settings label small{display:block;color:var(--muted)}
 #settings input{margin-top:3px;accent-color:var(--accent)}
@@ -437,7 +441,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>Click a pin, then click another pin to run a cable. Dragging from pin to pin also works.</li>
       <li>Drag a cable end off its pin to move it. Release it on empty space to unplug it.</li>
       <li>Click a cable to select it. Remove it with <kbd>Delete</kbd>, a double-click, or the button in its panel.</li>
-      <li><kbd>Esc</kbd> cancels a cable you're placing.</li>
+      <li><kbd>Esc</kbd> cancels a cable you're placing. Otherwise it closes what you opened last, one thing per press: a dialog, Settings, the cable panel, a close-up, the logic view on the screen. The wiring guide needs <kbd>Esc</kbd> twice, so it isn't closed by accident.</li>
       <li>The dupont cables lying along the front edge of the panel set the colour of new cables: click one to use its colour, or the rainbow jumpers for a different colour every time. With a cable selected, clicking one also recolours that cable.</li>
     </ul>
     <h3>Modules</h3>
@@ -520,7 +524,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 <section id="info" class="float" hidden></section>
 
 <section id="settings" class="float" hidden>
-  <h2>Settings</h2>
+  <header><h2>Settings</h2><button id="setClose" class="xbtn" title="Close (Esc)" aria-label="Close the settings">×</button></header>
   <label><input type="checkbox" id="optPost"><span>Power modules without cables (shortcut)<small>On the real case a module works only once its +5V and 0V pins are cabled to the rail. This shortcut powers every module without power cables. Off by default, like the real case.</small></span></label>
   <label><input type="checkbox" id="optLevels"><span>Show logic levels on wires<small>Wires glow when their net is HIGH. Real dupont cables don't do this.</small></span></label>
   <label><input type="checkbox" id="optTips" checked><span>Logic probe on hover<small>Hovering a pin shows its name and level.</small></span></label>
@@ -538,12 +542,12 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 </section>
 
 <section id="lvPanel" class="float" hidden aria-label="Logic view and truth table">
-  <header><div class="segm" role="group" aria-label="Show"><button id="spLv" aria-pressed="true">Logic view</button><button id="spTt" aria-pressed="false">Truth table</button></div><span class="grow"></span><button id="lvClose" title="Put both back on their sheets in the lid">Back on the sheets</button></header>
+  <header><div class="segm" role="group" aria-label="Show"><button id="spLv" aria-pressed="true">Logic view</button><button id="spTt" aria-pressed="false">Truth table</button></div><span class="grow"></span><button id="lvClose" title="Put both back on their sheets in the lid (Esc)">Back on the sheets</button></header>
   <div class="lvp-body"></div>
 </section>
 
 <section id="guide" class="float" hidden aria-live="polite">
-  <header><h2>Wiring guide</h2><span id="gCount"></span><span class="grow"></span><button id="gClose" title="Close the guide (W)" aria-label="Close the guide">×</button></header>
+  <header><h2>Wiring guide</h2><span id="gCount"></span><span class="grow"></span><button id="gClose" title="Close the guide (W, or Esc twice)" aria-label="Close the guide">×</button></header>
   <div class="g-bar"><i id="gProg"></i></div>
   <div id="gGroup" class="g-grp"></div>
   <div id="gStep" class="g-step"></div>
@@ -2168,7 +2172,7 @@ function select(s) {
   invalidate();
   if (selected && selected.m) selected.m.mat.emissive.setHex(0);
   if (selected && selected.w) { selected.w.mat.emissive.setHex(0); selected.w.glow = ''; }
-  selected = s;
+  selected = s; if (s) uiOpened('sel');
   if (s && s.m) { s.m.mat.emissive.setHex(0x2a1d00); dsShow(s.m.type); hpTab('ds'); }
   else dsShow(DS.type);   // the page stays open, without the selected module's buttons
   // a selected cable gets a small panel: modules have their datasheet in the manual instead
@@ -2181,7 +2185,7 @@ function select(s) {
     <div class="row"><button id="iDel">Unplug (Del)</button><button id="iClose">Close</button></div>`;
   $('#iDel').onclick = () => { pushUndo(); removeWire(s.w); rebuild(); save(); };
   $('#iClose').onclick = () => select(null);
-  $('#settings').hidden = true; $('#bSet').setAttribute('aria-pressed', 'false');
+  settingsOpen(false);
   info.hidden = false;
 }
 function headerName(h) {
@@ -2551,7 +2555,7 @@ window.addEventListener('wheel', e => {
   }
 }, { capture: true, passive: false });
 window.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('input,textarea,select')) return;
+  if (e.target.closest && e.target.closest('input,textarea,select')) { if (e.key !== 'Escape') return; e.target.blur(); }
   // while the wiring guide is open, → plugs in the next cable and ← takes the last one off again
   if (GUIDE && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); if (e.key === 'ArrowRight') guidePlace(false); else guideBack(); return; }
   if (kbKey(e)) return;   // focus moves and Enter in the 3D view (see KEYBOARD)
@@ -2559,13 +2563,7 @@ window.addEventListener('keydown', e => {
   const inDesign = LV.dz && (PAPER.focus === 'diag' || PAPER.focus === 'lvui');
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (inDesign) dzUndo(); else undo(); return; }
   if (inDesign && (e.key === 'Delete' || e.key === 'Backspace') && DZ.sel) { e.preventDefault(); dzDelete(); return; }
-  if (e.key === 'Escape') {
-    if (wiring) cancelWiring(false); else select(null);
-    document.querySelectorAll('.modal').forEach(m => m.hidden = true);
-    if (isCloseUp(camView)) camBack();
-    else if (KB.focus && !wiring) kbFocus(null);
-    return;
-  }
+  if (e.key === 'Escape') { uiEscape(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (selected && selected.w) { pushUndo(); removeWire(selected.w); rebuild(); save(); }
     else if (selected && selected.m) { pushUndo(); const t = selected.m.type; destroyModule(selected.m); rebuild(); save(); toast(`${t} is back on the rack.`); }
@@ -2608,7 +2606,13 @@ function toggleScope(force) {
   }
   if (!scope.open) scopeBlank();
 }
-$('#bSet').onclick = () => { const s = $('#settings'); s.hidden = !s.hidden; $('#bSet').setAttribute('aria-pressed', String(!s.hidden)); if (!s.hidden) $('#info').hidden = true; };
+// Settings drops down from its button, over whatever is open below it
+function settingsOpen(open) {
+  const s = $('#settings'); s.hidden = !open; $('#bSet').setAttribute('aria-pressed', String(open));
+  if (open) { $('#info').hidden = true; uiOpened('settings'); uiLayout(); }
+}
+$('#bSet').onclick = () => settingsOpen($('#settings').hidden);
+$('#setClose').onclick = () => settingsOpen(false);
 $('#optPost').onchange = e => { S.autoPower = e.target.checked; rebuild(); save(); toast(S.autoPower ? 'Shortcut on: every module is powered without power cables.' : 'Modules are unpowered until their +5V and 0V pins are cabled to the rail. "Wire power" in the inspector does it for you.'); };
 $('#optLevels').onchange = e => { S.levels = e.target.checked; for (const w of wires) w.glow = ''; };
 $('#optTips').onchange = e => { S.tips = e.target.checked; };
@@ -4238,6 +4242,7 @@ function lvPanel(open, tab = LV.tab || 'lv') {
   $('#spLv').setAttribute('aria-pressed', String(tab === 'lv')); $('#spTt').setAttribute('aria-pressed', String(tab === 'tt'));
   $('#bLogic').setAttribute('aria-pressed', String(open && tab === 'lv')); $('#bTT').setAttribute('aria-pressed', String(open && tab === 'tt'));
   PAPER.focus = open ? 'lvui' : null;
+  if (open) uiOpened('lv'); uiLayout();
   LV.dz = null; lvPanes();
   if (LV.dz) { dzRender(); requestAnimationFrame(dzFit); } else requestAnimationFrame(lvFit);
   if (tab === 'tt' || !open) ttRender();
@@ -5104,7 +5109,7 @@ function camGlide(pos, tgt, instant) {
 function goView(kind, instant) {
   if (isCloseUp(kind) && !isCloseUp(camView)) camPrev = { pos: (camAnim ? camAnim.p1 : camera.position).clone(), tgt: (camAnim ? camAnim.t1 : controls.target).clone() };
   if (!isCloseUp(kind)) camPrev = null;
-  const v = viewFor(kind); camView = kind;
+  const v = viewFor(kind); camView = kind; if (isCloseUp(kind)) uiOpened('view');
   $('#vBack').hidden = !isCloseUp(kind);
   camGlide(v.pos, v.tgt, instant);
 }
@@ -5338,9 +5343,64 @@ $('#vTop').onclick = () => goView('top');
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); invalidate();
-  lvFit();
+  lvFit(); uiLayout();
 }
 window.addEventListener('resize', resize); resize();
+new ResizeObserver(uiLayout).observe($('#guide'));
+
+/* ================================================================
+   FLOATING UI: where the panels sit, and what Esc closes
+   ================================================================ */
+// The guide and the messages sit in the room the logic view panel leaves free, clear of the view dock in the corner;
+// Settings hangs under its button.
+function uiLayout() {
+  document.body.classList.toggle('lv-ui', !!LV.ui);
+  const root = document.documentElement.style, g = $('#guide'), dock = $('#dock').getBoundingClientRect();
+  const aboveDock = innerHeight - dock.top + 10;
+  let top = aboveDock;
+  if (!g.hidden) {
+    root.removeProperty('--gb');
+    const r = g.getBoundingClientRect();
+    const gb = r.left < dock.right + 10 && r.right > dock.left - 10 ? aboveDock : innerHeight - r.bottom;
+    root.setProperty('--gb', gb + 'px');
+    top = Math.max(top, gb + r.height + 10);
+  }
+  root.setProperty('--tb', top + 'px');
+  const st = $('#settings');
+  if (!st.hidden && innerWidth > 760) {
+    const b = $('#bSet').getBoundingClientRect();
+    st.style.top = (b.bottom + 8) + 'px'; st.style.right = 'auto';
+    st.style.left = Math.max(12, Math.min(innerWidth - st.offsetWidth - 12, b.right - st.offsetWidth)) + 'px';
+  } else st.style.top = st.style.left = st.style.right = '';
+}
+// Esc closes what you opened last, one thing per press: a cable in your hand first, then a dialog, then the panels
+// and close-ups, newest first. The wiring guide wants a second Esc, since closing it drops the cables still to go.
+const UI = { order: [], guideEsc: 0 };
+function uiOpened(k) { UI.order = UI.order.filter(x => x !== k); UI.order.push(k); }
+const UI_LAYERS = {
+  sel: [() => !!selected, () => select(null)],
+  settings: [() => !$('#settings').hidden, () => settingsOpen(false)],
+  lv: [() => !!LV.ui, () => lvPanel(false)],
+  view: [() => isCloseUp(camView), camBack],
+  guide: [() => !!GUIDE, () => {
+    const left = GUIDE.steps.length - GUIDE.done.filter(Boolean).length;
+    if (!left || performance.now() - UI.guideEsc < 3000) { UI.guideEsc = 0; guideStop(true); return; }
+    UI.guideEsc = performance.now();
+    toast(`Press Esc again to close the wiring guide (${left} cable${left === 1 ? '' : 's'} still to go).`);
+  }],
+};
+function uiEscape() {
+  if (wiring) { cancelWiring(false); return; }
+  const m = [...document.querySelectorAll('.modal')].find(x => !x.hidden);
+  if (m) { m.hidden = true; return; }
+  hideTip();
+  // newest first, then anything open that was opened some other way (say, a guide carried over from the last visit)
+  for (const k of [...UI.order.slice().reverse(), ...Object.keys(UI_LAYERS)]) {
+    const [isOpen, close] = UI_LAYERS[k];
+    if (isOpen()) { close(); return; }
+  }
+  if (KB.focus) kbFocus(null);
+}
 
 /* ================================================================
    KEYBOARD: shortcuts for the devices, and a focus that steps through everything on the bench you can click.
@@ -5613,7 +5673,7 @@ function guideStart() {
   rebuild(); save(); select(null);
   GUIDE = { steps, sig: modSig(), cur: 0, ver: -1, done: [], extra: [], msg: '' };
   guideSave();
-  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true');
+  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); uiOpened('guide');
   G3.group.visible = true;
   toast(`Wiring guide: ${steps.length} cable${steps.length === 1 ? '' : 's'}, one at a time. The cables were taken off the case; Undo puts them all back.`);
 }
@@ -5638,7 +5698,7 @@ function guideResume() {
   if (!g || !Array.isArray(g.steps) || g.sig !== modSig()) { try { localStorage.removeItem('unilog2.guide.v1'); } catch (_) {} return; }
   GUIDE = { steps: g.steps, sig: g.sig, cur: 0, ver: -1, done: [], extra: [], msg: '' };
   $('#gFollow').checked = !!g.follow;
-  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); G3.group.visible = true;
+  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); G3.group.visible = true; uiOpened('guide');
 }
 // The cables on the bench as steps, in the order picked in the guide; the printed wiring list uses the same order, so
 // its numbers match the guide's. While the guide runs, the whole circuit is its list of steps.
