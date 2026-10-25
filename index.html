@@ -104,6 +104,13 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 #ttBox .hp-tabs{margin:8px 22px 4px}
 #lvPanel .hp-tabs{margin:8px 12px 4px}
 #lvBox .hp-tabs{margin:8px 22px 4px}
+.lv-tools{align-items:center;font-size:12.5px}
+.lv-tools label{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.lv-tools select{padding:3px 6px;font-size:12.5px}
+.lv-tools .grow{flex:1}
+/* bend points of the selected wire in the designer */
+.dz-bend{fill:var(--accent);stroke:var(--lv-bg);stroke-width:1.5;cursor:move}
+.dz-bend:hover{r:6px}
 #lvPanel #lvPop,#lvPanel #ttPop,#lvPanel .sheet-only{display:none}
 #lvPanel .hp-tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 #lvOdd{position:absolute;inset:12px 16px auto;margin:0;font-size:12.5px;color:var(--muted);pointer-events:none}
@@ -323,7 +330,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
   <header class="ph"><b class="ph-t">UNILOG-2 circuit</b><span class="ph-k">Logic diagram</span><span class="ph-d"></span></header>
   <p id="lvAway" class="away" hidden>The logic view is open on the screen.<br><button id="lvBackSheet">Put it back on the sheet</button></p>
   <div id="lvBox">
-  <nav class="hp-tabs"><button id="lvPop" title="Open the logic view in a panel on the screen (L)">Open on the screen ⧉</button></nav>
+  <nav class="hp-tabs lv-tools"><label>Lines <select id="lvLines" aria-label="How wires are drawn"><option value="curved">Curved</option><option value="square">Square</option><option value="round">Square, rounded corners</option><option value="straight">Straight</option></select></label><button id="lvTidy" title="Lay the drawing out again automatically (Undo brings your arrangement back in the designer)">Tidy up</button><span class="grow"></span><button id="lvPop" title="Open the logic view in a panel on the screen (L)">Open on the screen ⧉</button></nav>
   <div id="lvPane" class="pane">
     <div class="stage">
       <svg id="lvSvg" xmlns="http://www.w3.org/2000/svg"><g id="lvRoot"></g></svg>
@@ -435,8 +442,9 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>Two A4 sheets are tucked into the pocket inside the lid: the logic diagram on the left and the truth table on the right. They are the real tools, not printouts: everything on them can be clicked. Click the blank part of a sheet to read it up close. While you read, scrolling and right-dragging move around the page. Click its heading, press <kbd>Esc</kbd> or <b>‹ Back</b> to go back to where you were looking before. <b>Logic view</b> or <kbd>L</kbd> goes straight to the diagram.</li>
       <li>The diagram sheet holds the logic view: the designer, which always shows what is wired on the bench. Every gate in use becomes a gate in the drawing (labelled with its slot and chip, like M7 7400·2), joined the way the cables join them, with live levels and working switches. Change it and press <b>Build on bench</b> to rewire the case; until then your edits are kept even if the bench changes, and <b>From the bench</b> takes what is wired again. Flip-flops, the adder and the decoder have no gate symbol, so a bench that uses them is shown as wired instead. <b>Open on the screen</b> (or <b>Logic view</b> on the top bar, or <kbd>L</kbd>) moves the logic view into a panel on the screen; <b>Back on the sheet</b> puts it back in the lid.</li>
       <li>The wired circuit: sources sit on the left, gates in the middle in order of signal depth, and LEDs, the display and the scope on the right. Feedback paths, like the cross-coupling in a latch, loop underneath. Wires are red when HIGH, green when LOW, dashed when floating, and blinking amber when two outputs fight.</li>
-      <li>Click a switch, pulse or the clock on the diagram to operate it. Click a gate to select its module on the bench.</li>
-      <li>The designer: draw a circuit from ideal gates (AND, OR, NAND, NOR, XOR, XNOR, NOT with 2–8 inputs), switches, pulses, the clock, constants, LEDs and the hex display. Drag from an output dot to an input dot to wire them.</li>
+      <li>Click a switch, pulse or the clock on the diagram to operate it. Click a gate to select its module on the bench. Drag any part to move it; the drawing remembers where you put it.</li>
+      <li><b>Lines</b> picks how wires are drawn, in the designer and the wired circuit alike: curved, square, square with rounded corners, or straight. <b>Tidy up</b> lays the drawing out again (in the designer, Undo brings your own arrangement back).</li>
+      <li>The designer: draw a circuit from ideal gates (AND, OR, NAND, NOR, XOR, XNOR, NOT with 2–8 inputs), switches, pulses, the clock, constants, LEDs and the hex display. Drag from an output dot to an input dot to wire them. Double-click a wire to add a bend point, then drag the point to guide the wire where you want it; double-click a point to remove it. Moving parts and bending wires doesn't count as a change to the design, so it keeps following the bench and keeps your layout when the bench changes.</li>
       <li><b>Build on bench</b> runs the solver. It breaks the gates into real 74xx gates and rewrites them so they fit the chips already in the case (AND becomes NAND + NOT, OR goes through NANDs, and so on), cancels double inverters, and packs the result into as few modules as possible. Missing chips come from the rack. It then lays every dupont cable within the real limits (two headers per pin, one cable per header) and lists them so you can copy the wiring onto the real case. Undo on the top bar restores the bench as it was.</li>
     </ul>
     <h3>Truth tables</h3>
@@ -2614,6 +2622,8 @@ $('#bDl').onclick = () => {
 function loadText(txt) {
   try {
     const d = JSON.parse(txt); if (!d || !Array.isArray(d.modules)) throw 0;
+    // a different bench: its diagram is laid out afresh, not fitted around where you put the last one's parts
+    D.arranged = false;
     pushUndo(); const info = deserialize(d); save();
     const uniq = a => [...new Set(a)].join(', ');
     if (info.legacy.length) setTimeout(() => toast(`This bench uses ${uniq(info.legacy)}, which ${info.legacy.length > 1 ? 'are' : 'is'} not in the lab set (not in the photos of the case or the module box). It still works here, but you won't find it in the lab.`, true), 400);
@@ -2858,7 +2868,7 @@ document.querySelectorAll('.modal').forEach(m => { m.addEventListener('click', e
    Sources (switches, clock, pulses, rails) on the left, gates and chips in the middle in layers by signal
    depth, sinks (LEDs, display, scope) on the right. Feedback paths (latches, counters) loop underneath.
    ================================================================ */
-const LV = { open: true, dirty: true, dz: null, ui: false, fb: false, items: [], segEls: null, clkEl: null, clkTxt: '', view: { x: 0, y: 0, k: 1 }, W: 0, H: 0, autoFit: true, hoverM: null };
+const LV = { open: true, dirty: true, dz: null, ui: false, pos: {}, drag: null, fb: false, items: [], segEls: null, clkEl: null, clkTxt: '', view: { x: 0, y: 0, k: 1 }, W: 0, H: 0, autoFit: true, hoverM: null };
 const lvSvg = $('#lvSvg'), lvRoot = $('#lvRoot');
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const lvTxt = s => { const i = s.indexOf('~'); return i < 0 ? esc(s) : esc(s.slice(0, i)) + `<tspan style="text-decoration:overline">${esc(s.slice(i + 1))}</tspan>`; };
@@ -2996,21 +3006,29 @@ function lvGateBody(n) {
   if (bub) s += `<circle class="lv-body" cx="${BW + 4}" cy="${Hh / 2}" r="4"/>`;
   return s;
 }
+// where you dragged parts of the wired diagram, by a key that survives reloading the bench (module slot, not its id)
+const lvKey = n => n.m ? (n.kind === 'gate' ? `g${n.m.slot}.${n.id.split('.')[1]}` : `b${n.m.slot}`) : n.id;
+function lvSavePos() { try { localStorage.setItem('unilog2.diagram.v1', JSON.stringify(LV.pos)); } catch (_) {} }
 function lvBuild() {
   LV.dirty = false;
   const { nodes, edges } = lvGraph();
   $('#lvEmpty').hidden = nodes.length > 0;
   const lay = lvLayout(nodes, edges);
-  LV.W = lay.W; LV.H = lay.H; LV.fb = lay.back.size > 0;
+  for (const n of nodes) { const p = LV.pos[lvKey(n)]; if (p) { n.x = p.x; n.y = p.y; } }
+  LV.W = Math.max(lay.W, ...nodes.map(n => n.x + n.w + 30)); LV.H = Math.max(lay.H, ...nodes.map(n => n.y + n.h + 70));
+  LV.fb = lay.back.size > 0;
   const P = (p) => [p.node.x + p.x, p.node.y + p.y];
   const out = [], fan = new Map();
+  const boxes = nodes.map(n => ({ n, x: n.x, y: n.y, w: n.w, h: n.h }));
   edges.forEach((e, i) => {
     const [ax, ay] = P(e.a), [bx, by] = P(e.b);
     let d;
-    if (bx > ax + 24) { const dx = Math.max(28, (bx - ax) * 0.45); d = `M${ax},${ay} C${ax + dx},${ay} ${bx - dx},${by} ${bx},${by}`; }
-    else {
-      const yb = Math.max(e.a.node.y + e.a.node.h, e.b.node.y + e.b.node.h) + 14 + (i % 5) * 7;
-      const ox = e.a.side === 'out' ? 36 : -36;
+    const A = e.a.node, B = e.b.node, others = boxes.filter(q => q.n !== A && q.n !== B), lane = ((e.net.id % 5) - 2) * 6;
+    const yb = A !== B && Math.abs(A.x - B.x) < 40 && Math.abs(A.y - B.y) < 220 ? latchGap(A.y, A.h, B.y, B.h, ay > by)
+      : underAll({ x: ax, y: ay }, { x: bx, y: by }, boxes, i);
+    if (e.a.side === 'out') d = wirePath({ x: ax, y: ay }, { x: bx, y: by }, autoBends({ x: ax, y: ay }, { x: bx, y: by }, others, lane), yb, lane);
+    else {   // two inputs joined with nothing driving them: a loop out to the left
+      const ox = -36;
       d = `M${ax},${ay} C${ax + ox},${ay} ${ax + ox},${yb} ${ax + ox / 3},${yb} L${bx - 12},${yb} C${bx - 40},${yb} ${bx - 40},${by} ${bx},${by}`;
     }
     const tip = `${e.a.desc} → ${e.b.desc}`;
@@ -3019,7 +3037,7 @@ function lvBuild() {
   });
   for (const [p, c] of fan) if (c > 1) { const [x, y] = P(p); out.push(`<circle class="lv-dot" cx="${x}" cy="${y}" r="3.2" data-net="${p.term.net.id}"/>`); }
   for (const n of nodes) {
-    let g = `<g class="lv-node${n.act ? ' act' : ''}" transform="translate(${n.x},${n.y})"${n.act ? ` data-act="${n.act}"` : ''}${n.tip ? ` data-tip="${esc(n.tip)}"` : ''}${n.m ? ` data-uid="${n.m.uid}"` : ''}>`;
+    let g = `<g class="lv-node${n.act ? ' act' : ''}" transform="translate(${n.x},${n.y})" data-key="${lvKey(n)}"${n.act ? ` data-act="${n.act}"` : ''}${n.tip ? ` data-tip="${esc(n.tip)}"` : ''}${n.m ? ` data-uid="${n.m.uid}"` : ''}>`;
     const stub = (p, x2) => `<line class="lv-w" x1="${p.x}" y1="${p.y}" x2="${x2}" y2="${p.y}" data-net="${p.term.net.id}"/>`
       + `<g class="lv-v" transform="translate(${(p.x + x2) / 2},${p.y})" data-net="${p.term.net.id}"><rect x="-5" y="-6.5" width="10" height="13" rx="2"/><text y="3.3" text-anchor="middle"></text></g>`;
     if (n.kind === 'gate') {
@@ -3061,7 +3079,7 @@ function lvBuild() {
   LV.segEls = [...lvRoot.querySelectorAll('[data-seg]')];
   LV.segM = -1;
   LV.clkEl = lvRoot.querySelector('[data-clk]'); LV.clkTxt = '';
-  if (LV.autoFit) lvFit();
+  if (LV.autoFit && !LV.drag) lvFit();
 }
 function lvApply() { const v = LV.view; lvRoot.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); }
 // the sheet is a fixed page, so the diagram is always fitted to it (layout size: the page may be under a 3D transform)
@@ -3098,19 +3116,29 @@ function lvHoverModule(m) {
 }
 $('#bLogic').onclick = () => lvPanelToggle('lv');
 let lvPulse = null;
+try { LV.pos = JSON.parse(localStorage.getItem('unilog2.diagram.v1') || '{}') || {}; } catch (_) {}
+// a pointer position in diagram units (through the page's 3D transform on the sheet, plainly in the panel)
+const lvLocal = e => { const p = lvSvg.closest('.paper') ? paperPoint(lvSvg, e) : (r => ({ x: e.clientX - r.left, y: e.clientY - r.top }))(lvSvg.getBoundingClientRect()); return { x: (p.x - LV.view.x) / LV.view.k, y: (p.y - LV.view.y) / LV.view.k }; };
+// A click on a part operates it (switch, pulse, clock) or finds its module; dragging it moves it in the drawing.
 lvSvg.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
-  const actEl = e.target.closest('[data-act]');
-  if (actEl) {
-    const [k, v] = actEl.dataset.act.split(':');
-    if (k === 'sw') pressControl({ kind: 'switch', i: +v });
-    else if (k === 'pulse') { pressControl({ kind: 'pulse', i: +v }); lvPulse = +v; }
-    else if (k === 'clk') pressControl({ kind: 'range', i: (S.range + 1) % 3 });
-    else if (k === 'mod') { const m = modules.find(x => x.uid === +v); if (m) select({ m }); }
-    try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
-  }
+  const nodeEl = e.target.closest('[data-key]'), actEl = e.target.closest('[data-act]');
+  if (!nodeEl) return;
+  const [k, v] = actEl ? actEl.dataset.act.split(':') : [];
+  if (k === 'pulse') { pressControl({ kind: 'pulse', i: +v }); lvPulse = +v; }   // held while the button is down
+  const p = lvLocal(e), tr = /translate\(([-\d.]+),([-\d.]+)\)/.exec(nodeEl.getAttribute('transform'));
+  LV.drag = { key: nodeEl.dataset.key, act: k && k !== 'pulse' ? [k, v] : null, p, x0: +tr[1], y0: +tr[2], sx: e.clientX, sy: e.clientY, moved: false };
+  try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
 });
 lvSvg.addEventListener('pointermove', e => {
+  const dr = LV.drag;
+  if (dr) {
+    if (!dr.moved && Math.hypot(e.clientX - dr.sx, e.clientY - dr.sy) < 5) return;
+    if (!dr.moved) { dr.moved = true; if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; } }
+    const p = lvLocal(e);
+    LV.pos[dr.key] = { x: Math.round((dr.x0 + p.x - dr.p.x) / 5) * 5, y: Math.max(0, Math.round((dr.y0 + p.y - dr.p.y) / 5) * 5) };
+    lvBuild(); lvFrame(); hideTip(); return;
+  }
   const el = e.target.closest('[data-tip]');
   const uidEl = e.target.closest('[data-uid]');
   lvHoverModule(uidEl ? modules.find(x => x.uid === +uidEl.dataset.uid) || null : null);
@@ -3119,7 +3147,16 @@ lvSvg.addEventListener('pointermove', e => {
   if (el.dataset.net != null) { const [lc, lt] = lampFor(nets[+el.dataset.net]); html += `<div class="s"><span class="lamp" style="background:${lc};box-shadow:0 0 6px ${lc}"></span>${lt}</div>`; }
   showTip(e.clientX, e.clientY, html);
 });
-const lvUp = () => { if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; } };
+const lvUp = () => {
+  if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; }
+  const dr = LV.drag; LV.drag = null; if (!dr) return;
+  if (dr.moved) { lvSavePos(); return; }
+  if (!dr.act) return;
+  const [k, v] = dr.act;
+  if (k === 'sw') pressControl({ kind: 'switch', i: +v });
+  else if (k === 'clk') pressControl({ kind: 'range', i: (S.range + 1) % 3 });
+  else if (k === 'mod') { const m = modules.find(x => x.uid === +v); if (m) select({ m }); }
+};
 lvSvg.addEventListener('pointerup', lvUp);
 lvSvg.addEventListener('pointercancel', lvUp);
 lvSvg.addEventListener('pointerleave', () => { hideTip(); lvHoverModule(null); });
@@ -3147,20 +3184,105 @@ function dzGeom(n) {
 const dzSig = n => n.t === 'one' ? 'ONE' : n.t === 'zero' ? 'ZERO' : 'n' + n.id;
 const dzLive = () => !!D.built && D.builtVersion === benchVersion;
 const dzLabel = n => n.name || ({ and: 'AND', or: 'OR', nand: 'NAND', nor: 'NOR', xor: 'XOR', xnor: 'XNOR', not: 'NOT' }[n.t] || n.t) + ' #' + n.id;
-function dzPath(ax, ay, bx, by, a, ga, b, gb, i) {
-  if (bx > ax + 24) { const dx = Math.max(28, (bx - ax) * 0.45); return `M${ax},${ay} C${ax + dx},${ay} ${bx - dx},${by} ${bx},${by}`; }
-  const yb = Math.max(a.y + ga.h, b.y + gb.h) + 16 + (i % 5) * 7;
-  return `M${ax},${ay} C${ax + 36},${ay} ${ax + 36},${yb} ${ax + 12},${yb} L${bx - 12},${yb} C${bx - 40},${yb} ${bx - 40},${by} ${bx},${by}`;
+// the height at which a feedback wire between two stacked parts (a latch) crosses over: in the gap between them,
+// just under the upper one, clear of the lower one's label
+function latchGap(ay, ah, by, bh, up) {
+  const [t, u] = ay < by ? [ay + ah, by] : [by + bh, ay];
+  if (u - t >= 26) return Math.round(t + 8 + (up ? 4 : -4));
+  return Math.round(u > t ? (t + u) / 2 + (up ? 4 : -4) : Math.max(ay + ah, by + bh) + 16);
+}
+// Guiding wires round parts: a wire that would cross a part standing between its ends (in a column in between)
+// runs along a free corridor instead, turning in the gaps between columns. `boxes` are the other parts.
+function autoBends(a, b, boxes, lane) {
+  if (b.x <= a.x + 24) return [];
+  const mid = boxes.filter(q => q.x > a.x + 4 && q.x + q.w < b.x - 4);
+  const blocked = (y0, y1) => mid.some(q => q.y < y1 && q.y + q.h > y0);
+  if (!blocked(Math.min(a.y, b.y) - 6, Math.max(a.y, b.y) + 6)) return [];
+  let best = null, bc = Infinity;
+  for (const y of [a.y, b.y, ...mid.flatMap(q => [q.y - 10, q.y + q.h + 10])]) {
+    if (blocked(y - 6, y + 6)) continue;
+    const c = Math.abs(y - a.y) + Math.abs(y - b.y); if (c < bc) { bc = c; best = y; }
+  }
+  if (best == null) return [];
+  const y = Math.round(best + lane / 3);
+  const x1 = Math.round((a.x + Math.min(...mid.map(q => q.x))) / 2 + lane), x2 = Math.round((Math.max(...mid.map(q => q.x + q.w)) + b.x) / 2 + lane);
+  return [{ x: x1, y }, { x: x2, y }];
+}
+// a feedback wire goes round underneath everything between its ends
+function underAll(a, b, boxes, i) {
+  const x0 = Math.min(a.x, b.x) - 30, x1 = Math.max(a.x, b.x) + 30;
+  return Math.max(a.y, b.y, ...boxes.filter(q => q.x < x1 && q.x + q.w > x0).map(q => q.y + q.h)) + 16 + (i % 5) * 7;
+}
+// How wires are drawn in the logic view (the designer and the wired diagram), picked under "Lines".
+const LINE = { style: 'curved' };
+try { LINE.style = localStorage.getItem('unilog2.lines') || 'curved'; } catch (_) {}
+// The path of a wire from an output at a to an input at b, through the wire's bend points (if any).
+// A wire running backwards (feedback) without bend points of its own goes round underneath, at height `under`.
+// `lane` spreads the vertical runs of neighbouring square wires so they don't lie on top of each other.
+function wirePath(a, b, bends, under, lane = 0) {
+  const st = LINE.style, back = !bends.length && b.x <= a.x + 24;
+  const o = 14 + Math.round((lane + 12) / 2);   // spread the vertical runs of loops by lane as well
+  const loop = [a, { x: a.x + o, y: a.y }, { x: a.x + o, y: under }, { x: b.x - o, y: under }, { x: b.x - o, y: b.y }, b];
+  if (st === 'curved') {
+    if (!bends.length && !back) { const dx = Math.max(28, (b.x - a.x) * 0.45); return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`; }
+    if (back) return `M${a.x},${a.y} C${a.x + 36},${a.y} ${a.x + 36},${under} ${a.x + 12},${under} L${b.x - 12},${under} C${b.x - 40},${under} ${b.x - 40},${b.y} ${b.x},${b.y}`;
+    // through the bend points: each step forward is a smooth S that leaves and arrives level (so it never swings
+    // back over the part it leaves); a step backwards is a plain curve
+    const p = [a, ...bends, b];
+    let d = `M${a.x},${a.y}`;
+    for (let i = 0; i + 1 < p.length; i++) {
+      const u = p[i], v = p[i + 1], dx = (v.x - u.x) * 0.45;
+      if (v.y === u.y) d += ` L${v.x},${v.y}`;
+      else if (dx > 0) d += ` C${u.x + dx},${u.y} ${v.x - dx},${v.y} ${v.x},${v.y}`;
+      else d += ` C${u.x + (v.x - u.x) / 3},${u.y + (v.y - u.y) / 3} ${u.x + (v.x - u.x) * 2 / 3},${u.y + (v.y - u.y) * 2 / 3} ${v.x},${v.y}`;
+    }
+    return d;
+  }
+  let c;
+  if (back) c = loop;
+  else if (st === 'straight') c = [a, ...bends, b];
+  else if (!bends.length) { const mx = Math.round((a.x + b.x) / 2 + lane); c = [a, { x: mx, y: a.y }, { x: mx, y: b.y }, b]; }
+  else {   // right angles: across to each bend point's x, then up or down to it; from the last one across, and
+    c = [a];   // down to the input's level halfway to it
+    for (const q of bends) { c.push({ x: q.x, y: c[c.length - 1].y }, q); }
+    const last = c[c.length - 1], mx = Math.round((last.x + b.x) / 2);
+    c.push({ x: mx, y: last.y }, { x: mx, y: b.y }, b);
+  }
+  // drop repeated and in-line corners
+  c = c.filter((q, i) => i === 0 || q.x !== c[i - 1].x || q.y !== c[i - 1].y);
+  c = c.filter((q, i) => i === 0 || i === c.length - 1 || !((c[i - 1].x === q.x && q.x === c[i + 1].x) || (c[i - 1].y === q.y && q.y === c[i + 1].y)));
+  if (st !== 'round') return 'M' + c.map(q => `${q.x},${q.y}`).join(' L');
+  let d = `M${c[0].x},${c[0].y}`;
+  for (let i = 1; i < c.length - 1; i++) {
+    const p = c[i - 1], q = c[i], n = c[i + 1];
+    const r = Math.min(8, Math.hypot(q.x - p.x, q.y - p.y) / 2, Math.hypot(n.x - q.x, n.y - q.y) / 2);
+    const u = (s, t) => { const l = Math.hypot(t.x - s.x, t.y - s.y) || 1; return { x: (t.x - s.x) / l, y: (t.y - s.y) / l }; };
+    const d1 = u(q, p), d2 = u(q, n);
+    d += ` L${q.x + d1.x * r},${q.y + d1.y * r} Q${q.x},${q.y} ${q.x + d2.x * r},${q.y + d2.y * r}`;
+  }
+  return d + ` L${c[c.length - 1].x},${c[c.length - 1].y}`;
+}
+// `src` numbers the driving part: wires from one output share their vertical run, like one trunk that branches
+function dzPath(ax, ay, bx, by, a, ga, b, gb, i, bends, src = i, boxes = []) {
+  const others = boxes.filter(q => q.n !== a && q.n !== b), lane = ((src % 5) - 2) * 6, A = { x: ax, y: ay }, B = { x: bx, y: by };
+  let under = underAll(A, B, others.concat({ x: a.x, y: a.y, w: ga.w, h: ga.h }, { x: b.x, y: b.y, w: gb.w, h: gb.h }), i);
+  if (a !== b && Math.abs(a.x - b.x) < 40 && Math.abs(a.y - b.y) < 150) under = latchGap(a.y, ga.h, b.y, gb.h, ay > by);
+  return wirePath(A, B, bends && bends.length ? bends : autoBends(A, B, others, lane), under, lane);
 }
 function dzRender(skipBar) {
   const out = [], byId = new Map(D.nodes.map(n => [n.id, n]));
   const live = dzLive(), B = live ? D.built : null;
+  // every part's box, with room for a gate's label above it
+  const boxes = D.nodes.map(n => { const g = dzGeom(n), lab = GATE_T.has(n.t) ? 14 : 0; return { n, x: n.x, y: n.y - lab, w: g.w, h: g.h + lab }; });
   D.wires.forEach((w, i) => {
     const a = byId.get(w.from), b = byId.get(w.to); if (!a || !b) return;
     const ga = dzGeom(a), gb = dzGeom(b), bp = gb.ins[w.port]; if (!bp || !ga.out) return;
-    const d = dzPath(a.x + ga.out.x, a.y + ga.out.y, b.x + bp.x, b.y + bp.y, a, ga, b, gb, i);
+    const d = dzPath(a.x + ga.out.x, a.y + ga.out.y, b.x + bp.x, b.y + bp.y, a, ga, b, gb, i, w.pts, D.nodes.indexOf(a), boxes);
     out.push(`<g data-wire="${i}" class="${DZ.sel && DZ.sel.wire === i ? 'sel' : ''}"><path class="lv-hit" d="${d}"/><path class="lv-w dz-w" d="${d}" data-sig="${dzSig(a)}"/></g>`);
   });
+  // the selected wire shows its bend points, to drag (double-click one to remove it)
+  const sw = DZ.sel && DZ.sel.wire != null && D.wires[DZ.sel.wire];
+  const bendsSvg = sw && sw.pts ? sw.pts.map((p, j) => `<circle class="dz-bend" data-bend="${DZ.sel.wire}:${j}" cx="${p.x}" cy="${p.y}" r="4.5"/>`).join('') : '';
   out.push('<path class="dz-temp" d=""/>');
   for (const n of D.nodes) {
     const g = dzGeom(n), sel = DZ.sel && DZ.sel.node === n.id;
@@ -3191,6 +3313,7 @@ function dzRender(skipBar) {
     if (g.out) s += `<circle class="dz-port" data-out="${n.id}" data-sig="${dzSig(n)}" cx="${g.out.x}" cy="${g.out.y}" r="5"/>`;
     out.push(s + '</g>');
   }
+  if (bendsSvg) out.push(bendsSvg);
   dzRoot.innerHTML = out.join('');
   DZ.items = [...dzRoot.querySelectorAll('[data-sig],[data-term]')].map(el => ({ el, sig: el.dataset.sig, term: el.dataset.term, s: '' }));
   DZ.hexEls = [...dzRoot.querySelectorAll('[data-hex]')]; DZ.hexTxt = '';
@@ -3219,15 +3342,17 @@ function dzFit() {
   const k = Math.min((r.width - 40) / (x1 - x0), (r.height - 40) / (y1 - y0), 1.5);
   DZ.view = { k, x: (r.width - (x1 - x0) * k) / 2 - x0 * k, y: (r.height - (y1 - y0) * k) / 2 - y0 * k }; dzApply();
 }
-function dzSnapshot() { return JSON.stringify({ nodes: D.nodes, wires: D.wires, seq: D.seq, fromBench: !!D.fromBench && !D.changed }); }
+function dzSnapshot() { return JSON.stringify({ nodes: D.nodes, wires: D.wires, seq: D.seq, fromBench: !!D.fromBench && !D.changed, arranged: !!D.arranged }); }
 function dzPush() { DZ.undo.push(dzSnapshot()); if (DZ.undo.length > 60) DZ.undo.shift(); }
 function dzUndo() {
   if (!DZ.undo.length) { toast('Nothing to undo in the design.'); return; }
   const s = JSON.parse(DZ.undo.pop()); D.nodes = s.nodes; D.wires = s.wires; D.seq = s.seq; DZ.sel = null; dzChanged();
 }
 function dzSave() { DZ.ver++; try { localStorage.setItem('unilog2.design.v1', dzSnapshot()); } catch (_) {} }
-function dzLoad(s) { if (!s || !Array.isArray(s.nodes)) return; D.nodes = s.nodes; D.wires = s.wires || []; D.seq = s.seq || (Math.max(0, ...s.nodes.map(n => n.id)) + 1); D.built = null; D.fromBench = !!s.fromBench; DZ.sel = null; }
+function dzLoad(s) { if (!s || !Array.isArray(s.nodes)) return; D.nodes = s.nodes; D.wires = s.wires || []; D.seq = s.seq || (Math.max(0, ...s.nodes.map(n => n.id)) + 1); D.built = null; D.fromBench = !!s.fromBench; D.arranged = !!s.arranged; DZ.sel = null; }
 function dzChanged() { D.changed = true; dzRender(); dzSave(); dzStatus(); }
+// moving parts and bending wires only changes how the design is drawn, so a design that follows the bench keeps following it
+function dzLayoutChanged() { D.arranged = true; dzRender(); dzSave(); }
 function dzStatus() {
   const m = $('#dzMsg');
   if (m.classList.contains('bad')) return;
@@ -3264,7 +3389,7 @@ function dzDelete() {
 function dzSelBar() {
   const bar = $('#dzSel'), sel = DZ.sel;
   const n = sel && sel.node != null ? D.nodes.find(x => x.id === sel.node) : null;
-  if (!n && !(sel && sel.wire != null)) { bar.innerHTML = 'Add parts with the buttons above. Drag from an output dot to an input dot to wire them; drag a wire off an input to move it. Select a part and press Delete to remove it.'; return; }
+  if (!n && !(sel && sel.wire != null)) { bar.innerHTML = 'Add parts with the buttons above. Drag from an output dot to an input dot to wire them; drag a wire off an input to move it. Double-click a wire to bend it. Select a part and press Delete to remove it.'; return; }
   if (!n) { bar.innerHTML = '<b>Wire</b><button id="dzDel">Delete</button>'; $('#dzDel').onclick = dzDelete; return; }
   let h = `<b>${esc(dzLabel(n))}</b>`;
   if (n.t !== 'one' && n.t !== 'zero') h += `<label>Name <input type="text" id="dzName" maxlength="10" value="${esc(n.name || '')}"></label>`;
@@ -3292,8 +3417,9 @@ function dzPortPos(id, port) {
 }
 dzSvg.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
-  const t = e.target, outEl = t.closest('[data-out]'), inEl = t.closest('[data-in]'), nodeEl = t.closest('[data-node]'), wireEl = t.closest('[data-wire]');
+  const t = e.target, outEl = t.closest('[data-out]'), inEl = t.closest('[data-in]'), nodeEl = t.closest('[data-node]'), wireEl = t.closest('[data-wire]'), bendEl = t.closest('[data-bend]');
   try { dzSvg.setPointerCapture(e.pointerId); } catch (_) {}
+  if (bendEl) { const [wi, j] = bendEl.dataset.bend.split(':').map(Number); DZ.drag = { mode: 'bend', wi, j, moved: false }; return; }
   if (outEl) { DZ.drag = { mode: 'wire', from: +outEl.dataset.out }; return; }
   if (inEl) {
     const [id, port] = inEl.dataset.in.split(':').map(Number), wi = D.wires.findIndex(w => w.to === id && w.port === port);
@@ -3316,6 +3442,10 @@ dzSvg.addEventListener('pointerdown', e => {
 dzSvg.addEventListener('pointermove', e => {
   const d = DZ.drag; if (!d) return;
   if (d.mode === 'pan') { const p = dzLocal(e); DZ.view.x = d.vx + p.x - d.x; DZ.view.y = d.vy + p.y - d.y; dzApply(); return; }
+  if (d.mode === 'bend') {
+    if (!d.moved) { dzPush(); d.moved = true; }
+    const p = dzPt(e), q = D.wires[d.wi].pts[d.j]; q.x = Math.round(p.x / 5) * 5; q.y = Math.round(p.y / 5) * 5; dzRender(true); return;
+  }
   if (d.mode === 'node') {
     if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return;
     if (!d.moved) { dzPush(); d.moved = true; }
@@ -3339,8 +3469,10 @@ const dzEnd = e => {
     const outEl = el && el.closest && el.closest('[data-out]');
     if (outEl) { dzPush(); D.wires = D.wires.filter(w => !(w.to === d.to && w.port === d.port)); D.wires.push({ from: +outEl.dataset.out, to: d.to, port: d.port }); dzChanged(); }
     else dzRender();
+  } else if (d.mode === 'bend') {
+    if (d.moved) dzLayoutChanged();
   } else if (d.mode === 'node') {
-    if (d.moved) dzChanged();
+    if (d.moved) dzLayoutChanged();   // moving a part is layout only: the design still follows the bench
     else {
       const bn = dzLive() && D.built.nodes[d.n.id];
       if (bn && d.n.t === 'sw') pressControl({ kind: 'switch', i: bn.k - 1 });
@@ -3349,6 +3481,22 @@ const dzEnd = e => {
   }
 };
 dzSvg.addEventListener('pointerup', dzEnd);
+// double-click a wire to put a bend point there, double-click a bend point to take it away
+dzSvg.addEventListener('dblclick', e => {
+  const bendEl = e.target.closest('[data-bend]'), wireEl = e.target.closest('[data-wire]');
+  if (bendEl) {
+    const [wi, j] = bendEl.dataset.bend.split(':').map(Number);
+    dzPush(); D.wires[wi].pts.splice(j, 1); if (!D.wires[wi].pts.length) delete D.wires[wi].pts; dzLayoutChanged(); return;
+  }
+  if (!wireEl) return;
+  const wi = +wireEl.dataset.wire, w = D.wires[wi], p = dzPt(e), q = { x: Math.round(p.x / 5) * 5, y: Math.round(p.y / 5) * 5 };
+  const a = dzPortPos(w.from), b = dzPortPos(w.to, w.port); if (!a || !b) return;
+  // insert where it adds the least length to the run through the existing bend points
+  const pts = w.pts || [], chain = [a, ...pts, b], len = (u, v) => Math.hypot(u.x - v.x, u.y - v.y);
+  let best = 0, bd = 1e9;
+  for (let k = 0; k + 1 < chain.length; k++) { const add = len(chain[k], q) + len(q, chain[k + 1]) - len(chain[k], chain[k + 1]); if (add < bd) { bd = add; best = k; } }
+  dzPush(); w.pts = pts.slice(); w.pts.splice(best, 0, q); DZ.sel = { wire: wi }; dzLayoutChanged();
+});
 // in the panel the wheel zooms the design (on the sheet it moves the camera)
 dzSvg.addEventListener('wheel', e => {
   if (dzSvg.closest('.paper')) return;
@@ -3738,12 +3886,15 @@ function orderChain(items, posOf, isLeaf) {
   }
   return ord;
 }
+// a module whose +5V and 0V pins are cabled to the rail
+const cabledToPower = m => !m.def.passive && m.pt[m.def.vcc].net === T.get('VCC').net && m.pt[m.def.gnd].net === T.get('GND').net;
 function optimizeBench(opts = {}) {
   if (psuFault) { if (!opts.quiet) toast('Fix the short circuit before optimizing.', true); return null; }
   if (!wires.length) { if (!opts.quiet) toast('There are no cables to optimize yet.'); return null; }
   rebuild();
   const before = benchCableLength();
   const usedCount = () => modules.filter(m => wires.some(w => wireTouches(w, m))).length, usedBefore = usedCount();
+  const poweredBefore = new Set(modules.filter(cabledToPower));
   const hdrs = new Map(); for (const h of H.values()) { if (!hdrs.has(h.term.id)) hdrs.set(h.term.id, []); hdrs.get(h.term.id).push(h); }
   const railPos = { GND: [], VCC: [], H: [] };
   for (const h of H.values()) { const r = RAIL_RE.exec(h.id); if (r) { const p = headerTop(h, _pa); railPos[r[1]].push([p.x, p.z]); } }
@@ -3928,6 +4079,13 @@ function optimizeBench(opts = {}) {
       if (ha && hb) addWire(ha.id, hb.id, o.color); else failed++;
     }
   }
+  // Gates may have moved onto a chip that had no power cables (one the circuit didn't use before). Without the power
+  // shortcut that chip would be dead, so it gets +5V and 0V the way "Wire power" does it.
+  if (!S.autoPower) {
+    rebuild();
+    const gotGates = modules.filter(m => !m.def.passive && !poweredBefore.has(m) && m.def.gates && m.def.gates.some(gt => [...gt.i, gt.o].some(p => m.pt[p].net.terms.length > 1)));
+    if (gotGates.length) wirePower(gotGates, { quiet: true });
+  }
   rebuild(); save();
   const after = benchCableLength(), usedAfter = usedCount();
   if (failed || (!opts.noUndo && after + USE * usedAfter > (before + USE * usedBefore) - 0.5)) {
@@ -3988,6 +4146,17 @@ $('#lvClose').onclick = $('#lvBackSheet').onclick = $('#ttBackSheet').onclick = 
 $('#bTT').onclick = () => lvPanelToggle('tt');
 $('#lvPanel').addEventListener('pointerdown', () => { PAPER.focus = 'lvui'; });
 $('#dzFitB').onclick = dzFit;
+$('#lvLines').value = LINE.style;
+$('#lvLines').onchange = e => {
+  LINE.style = e.target.value; try { localStorage.setItem('unilog2.lines', LINE.style); } catch (_) {}
+  dzRender(true); LV.dirty = true; lvFrame();
+};
+// Tidy up: the designer lays its parts out again (Undo brings your arrangement back); the wired diagram forgets
+// where you dragged its parts
+$('#lvTidy').onclick = () => {
+  if (LV.dz) { if (!D.nodes.length) return; dzPush(); dzAutoLayout(D.nodes, D.wires); D.wires.forEach(w => delete w.pts); dzLayoutChanged(); D.arranged = false; dzSave(); requestAnimationFrame(dzFit); }
+  else { LV.pos = {}; lvSavePos(); LV.dirty = true; LV.autoFit = true; lvFrame(); }
+};
 
 /* ================================================================
    TRUTH TABLES: read from the design or the bench, edit, minimise (Quine–McCluskey) and synthesise
@@ -4377,33 +4546,81 @@ function ttSynthSmart() {
   if (exprs.some(e => /⊕/.test(e.html))) notes.push('XOR patterns used');
   return { nodes, wires, seq: id, gates, exprs, notes };
 }
-// columns by logic depth (inputs left, LEDs right), rows ordered by where their inputs come from
+// Columns by logic depth (inputs left, outputs right). The order inside each column is improved by sweeping back and
+// forth, each part moving towards the average height of what it connects to (fewer crossings). Then each part is
+// placed level with the average of its inputs where there is room, so most wires run straight across.
 function dzAutoLayout(nodes, wires) {
-  const by = new Map(nodes.map(n => [n.id, n])), pred = new Map(nodes.map(n => [n.id, []]));
-  for (const w of wires) pred.get(w.to).push(w.from);
-  const depth = new Map();
-  const dep = id => {
-    if (depth.has(id)) return depth.get(id);
-    const n = by.get(id); depth.set(id, 0);
-    const d = n.t === 'sw' || n.t === 'pulse' || n.t === 'clk' ? 0 : n.t === 'one' || n.t === 'zero' ? 1 : 1 + Math.max(0, ...pred.get(id).map(dep));
-    depth.set(id, d); return d;
+  const by = new Map(nodes.map(n => [n.id, n])), pred = new Map(nodes.map(n => [n.id, []])), succ = new Map(nodes.map(n => [n.id, []]));
+  for (const w of wires) { if (!by.has(w.from) || !by.has(w.to)) continue; pred.get(w.to).push(w.from); succ.get(w.from).push(w.to); }
+  const isSrc = n => n.t === 'sw' || n.t === 'pulse' || n.t === 'clk', isConst = n => n.t === 'one' || n.t === 'zero', sink = n => n.t === 'led' || n.t === 'hex';
+  // parts on a feedback loop (like the two gates of a latch) are one group and share a column (Tarjan's algorithm)
+  const grp = new Map(), low = new Map(), idx = new Map(), stack = [];
+  let ix = 0;
+  const scc = id => {
+    idx.set(id, ix); low.set(id, ix++); stack.push(id);
+    for (const t of succ.get(id)) {
+      if (!idx.has(t)) { scc(t); low.set(id, Math.min(low.get(id), low.get(t))); }
+      else if (stack.includes(t)) low.set(id, Math.min(low.get(id), idx.get(t)));
+    }
+    if (low.get(id) === idx.get(id)) { let t; do { t = stack.pop(); grp.set(t, id); } while (t !== id); }
   };
-  nodes.forEach(n => dep(n.id));
-  const sink = n => n.t === 'led' || n.t === 'hex';
+  nodes.forEach(n => { if (!idx.has(n.id)) scc(n.id); });
+  const members = new Map();
+  nodes.forEach(n => { const g = grp.get(n.id); if (!members.has(g)) members.set(g, []); members.get(g).push(n.id); });
+  const depth = new Map(), gdepth = new Map();
+  const dep = id => {
+    const g = grp.get(id);
+    if (gdepth.has(g)) return gdepth.get(g);
+    gdepth.set(g, 0);
+    const ms = members.get(g), n = by.get(id);
+    const ins = ms.flatMap(m => pred.get(m)).filter(p => grp.get(p) !== g);
+    const d = ms.length === 1 && isSrc(n) ? 0 : ms.length === 1 && isConst(n) ? 1 : 1 + Math.max(0, ...ins.map(dep));
+    gdepth.set(g, d); return d;
+  };
+  nodes.forEach(n => depth.set(n.id, dep(n.id)));
   const maxD = Math.max(1, ...nodes.filter(n => !sink(n)).map(n => depth.get(n.id)));
   nodes.forEach(n => { if (sink(n)) depth.set(n.id, maxD + 1); });
-  const cols = new Map();
-  for (const n of nodes) { const d = depth.get(n.id); if (!cols.has(d)) cols.set(d, []); cols.get(d).push(n); }
-  for (const d of [...cols.keys()].sort((a, b) => a - b)) {
-    const col = cols.get(d);
-    if (d > 0) col.forEach(n => { const ps = pred.get(n.id).map(p => by.get(p).y); n._b = ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : (n.t === 'one' || n.t === 'zero' ? -1e6 : 0); });
-    if (d > 0) col.sort((a, b) => a._b - b._b);
-    let y = 0;
-    for (const n of col) {
-      const h = GATE_T.has(n.t) ? Math.max(2, n.t === 'not' ? 1 : n.n) * 14 + 8 : n.t === 'led' ? 30 : n.t === 'hex' ? 88 : 36;
-      n.x = d * 180; n.y = d === 0 ? col.indexOf(n) * 70 : Math.max(y, Math.round((n._b || 0) - h / 2 + 18)); y = n.y + h + 34;
-      delete n._b;
+  // a constant sits in the column just before the first part it feeds
+  nodes.forEach(n => { if (isConst(n)) { const ds = succ.get(n.id).map(x => depth.get(x)); if (ds.length) depth.set(n.id, Math.max(0, Math.min(...ds) - 1)); } });
+  const nc = Math.max(0, ...nodes.map(n => depth.get(n.id))) + 1;
+  const cols = Array.from({ length: nc }, () => []);
+  nodes.forEach(n => cols[depth.get(n.id)].push(n));
+  cols[0].sort((a, b) => (a.k || 99) - (b.k || 99));
+  const order = new Map(), place = c => c.forEach((n, i) => order.set(n.id, c.length > 1 ? i / (c.length - 1) : 0.5));
+  cols.forEach(place);
+  for (let it = 0; it < 12; it++) {
+    const fwd = it % 2 === 0;
+    for (const c of fwd ? cols.slice(1) : cols.slice(0, -1).reverse()) {
+      for (const n of c) {
+        const nb = (fwd ? pred : succ).get(n.id).filter(x => depth.get(x) !== depth.get(n.id));
+        n._b = nb.length ? nb.reduce((s, x) => s + order.get(x), 0) / nb.length : order.get(n.id);
+      }
+      // a loop's parts stay next to each other, at the average of theirs
+      const gb = new Map();
+      for (const n of c) { const g = grp.get(n.id); if (!gb.has(g)) gb.set(g, []); gb.get(g).push(n._b); }
+      for (const n of c) { const v = gb.get(grp.get(n.id)); n._g = v.reduce((s, x) => s + x, 0) / v.length; }
+      c.sort((a, b) => a._g - b._g || grp.get(a.id) - grp.get(b.id) || a._b - b._b); place(c);
     }
+  }
+  const hOf = n => GATE_T.has(n.t) ? Math.max(2, n.t === 'not' ? 1 : n.n) * 14 + 8 : n.t === 'led' ? 30 : n.t === 'hex' ? 88 : 36;
+  const outY = n => { const g = dzGeom(n); return n.y + (g.out ? g.out.y : hOf(n) / 2); };
+  const GAP = 30, CW = 190;
+  cols.forEach((c, d) => {
+    let y = 0;
+    for (const n of c) {
+      n.x = d * CW;
+      const ps = pred.get(n.id).map(x => by.get(x)).filter(p => depth.get(p.id) < d);
+      const want = ps.length ? ps.reduce((s, p) => s + outY(p), 0) / ps.length - hOf(n) / 2 : y;
+      n.y = Math.round(Math.max(y, want) / 10) * 10; y = n.y + hOf(n) + GAP;
+      delete n._b; delete n._g;
+    }
+  });
+  // then the inputs (left column) move level with what they feed, keeping their order and spacing
+  let y = -Infinity;
+  for (const n of cols[0]) {
+    const ss = succ.get(n.id).map(x => by.get(x)).filter(t => depth.get(t.id) > 0);
+    const want = ss.length ? ss.reduce((s, t) => s + t.y + hOf(t) / 2, 0) / ss.length - hOf(n) / 2 : n.y;
+    n.y = Math.round(Math.max(y, want) / 10) * 10; y = n.y + hOf(n) + GAP;
   }
 }
 /* ================================================================
@@ -4424,24 +4641,32 @@ function benchDesign() {
     const t = (D.built.nodes[n.id] || {}).term || D.built.sig[dzSig(n)];
     if (t && n.name && !names.has(t)) names.set(t, n.name);
   }
+  // every part gets a key from what it is on the bench (a pin by slot, a switch, an LED...), so a design taken again
+  // from the bench keeps where you put its parts and how you bent its wires, even after the page is reloaded
+  const slotKey = id => { const mm = /^m(\d+)\.(\d+)$/.exec(id), m = mm && modules.find(x => x.uid === +mm[1]); return m ? `S${m.slot}.${mm[2]}` : id; };
+  // (only an arrangement you made: a design laid out automatically is laid out afresh)
+  const mine = D.arranged ? D.nodes : [];
+  const oldPos = new Map(mine.filter(n => n.key).map(n => [n.key, { x: n.x, y: n.y }]));
+  const oldKey = new Map(D.nodes.map(n => [n.id, n.key]));
+  const oldBends = new Map(D.wires.filter(w => w.pts && oldKey.get(w.from) && oldKey.get(w.to)).map(w => [`${oldKey.get(w.from)}>${oldKey.get(w.to)}:${w.port}`, w.pts]));
   const nodes = [], dw = [], sig = { ONE: 'VCC', ZERO: 'GND' }, bnodes = {};
   let seq = 1;
   const add = o => { const n = { id: seq++, x: 0, y: 0, name: '', ...o }; nodes.push(n); return n; };
   const gateOut = new Map(), gates = [];
   for (const m of used) m.def.gates.forEach((gt, k) => {
     if (![...gt.i, gt.o].some(p => m.pt[p].net.terms.length > 1)) return;   // an unused gate
-    const out = m.pt[gt.o], name = names.get(out.id) || `M${m.slot + 1} ${m.type}·${k + 1}`;
+    const out = m.pt[gt.o], name = names.get(out.id) || `M${m.slot + 1} ${m.type}·${k + 1}`, key = slotKey(out.id);
     let g;
     if (m.def.type === 'aoi') {
-      const a1 = add({ t: 'and', n: 2 }), a2 = add({ t: 'and', n: 2 }); g = add({ t: 'nor', n: 2, name });
+      const a1 = add({ t: 'and', n: 2, key: key + '#a' }), a2 = add({ t: 'and', n: 2, key: key + '#b' }); g = add({ t: 'nor', n: 2, name, key });
       dw.push({ from: a1.id, to: g.id, port: 0 }, { from: a2.id, to: g.id, port: 1 });
       gates.push({ m, pins: gt.i.slice(0, 2), node: a1 }, { m, pins: gt.i.slice(2, 4), node: a2 });
-    } else { g = add({ t: m.def.type, n: gt.i.length, name }); gates.push({ m, pins: gt.i, node: g }); }
+    } else { g = add({ t: m.def.type, n: gt.i.length, name, key }); gates.push({ m, pins: gt.i, node: g }); }
     gateOut.set(out, g); sig['n' + g.id] = out.id;
   });
   // the panel's sources, made on first use
   const src = new Map(), source = (key, make) => { if (!src.has(key)) src.set(key, make()); return src.get(key); };
-  const sw = k => source('sw' + k, () => { const s = add({ t: 'sw', k, name: names.get(`SW${k}Q`) || 'SW' + k }); sig['n' + s.id] = `SW${k}Q`; bnodes[s.id] = { k, term: `SW${k}Q` }; return s; });
+  const sw = k => source('sw' + k, () => { const s = add({ t: 'sw', k, name: names.get(`SW${k}Q`) || 'SW' + k, key: `SW${k}Q` }); sig['n' + s.id] = `SW${k}Q`; bnodes[s.id] = { k, term: `SW${k}Q` }; return s; });
   const drv = new Map();
   // the node that drives a net: a gate output, or one of the panel's outputs or rails (an undriven net has none:
   // inputs on it float HIGH, which is what an open designer input does too)
@@ -4452,11 +4677,11 @@ function benchDesign() {
     if (!n) for (const t of net.terms) {
       const id = t.id;
       if ((mm = /^SW(\d)Q$/.exec(id))) n = sw(+mm[1]);
-      else if ((mm = /^SW(\d)N$/.exec(id))) { const s = sw(+mm[1]); n = source(id, () => { const v = add({ t: 'not', n: 1 }); dw.push({ from: s.id, to: v.id, port: 0 }); sig['n' + v.id] = id; return v; }); }
-      else if ((mm = /^P(\d)(N?)$/.exec(id))) n = source(id, () => { const s = add({ t: 'pulse', k: +mm[1], low: !!mm[2], name: names.get(id) || 'P' + mm[1] }); sig['n' + s.id] = id; bnodes[s.id] = { k: +mm[1], term: id }; return s; });
-      else if (id === 'CLK' || id === 'CLKN') n = source(id, () => { const s = add({ t: 'clk', low: id === 'CLKN', name: 'CLK' }); sig['n' + s.id] = id; return s; });
-      else if (id === 'VCC' || /^H\d$/.test(id)) n = source('one', () => add({ t: 'one' }));
-      else if (id === 'GND') n = source('zero', () => add({ t: 'zero' }));
+      else if ((mm = /^SW(\d)N$/.exec(id))) { const s = sw(+mm[1]); n = source(id, () => { const v = add({ t: 'not', n: 1, key: id }); dw.push({ from: s.id, to: v.id, port: 0 }); sig['n' + v.id] = id; return v; }); }
+      else if ((mm = /^P(\d)(N?)$/.exec(id))) n = source(id, () => { const s = add({ t: 'pulse', k: +mm[1], low: !!mm[2], name: names.get(id) || 'P' + mm[1], key: id }); sig['n' + s.id] = id; bnodes[s.id] = { k: +mm[1], term: id }; return s; });
+      else if (id === 'CLK' || id === 'CLKN') n = source(id, () => { const s = add({ t: 'clk', low: id === 'CLKN', name: 'CLK', key: id }); sig['n' + s.id] = id; return s; });
+      else if (id === 'VCC' || /^H\d$/.test(id)) n = source('one', () => add({ t: 'one', key: 'ONE' }));
+      else if (id === 'GND') n = source('zero', () => add({ t: 'zero', key: 'ZERO' }));
       if (n) break;
     }
     drv.set(net, n); return n;
@@ -4464,14 +4689,22 @@ function benchDesign() {
   for (const g of gates) g.pins.forEach((p, i) => { const d = driverOf(g.m.pt[p].net); if (d) dw.push({ from: d.id, to: g.node.id, port: i }); });
   for (let k = 1; k <= 16; k++) {
     const t = T.get('LED' + k); if (t.net.terms.length < 2) continue;
-    const l = add({ t: 'led', k, name: names.get('LED' + k) || 'LED' + k }); bnodes[l.id] = { k, term: 'LED' + k };
+    const l = add({ t: 'led', k, name: names.get('LED' + k) || 'LED' + k, key: 'LED' + k }); bnodes[l.id] = { k, term: 'LED' + k };
     const d = driverOf(t.net); if (d) dw.push({ from: d.id, to: l.id, port: 0 });
   }
   if ([0, 1, 2, 3].some(k => T.get('BCD' + k).net.terms.length > 1)) {
-    const h = add({ t: 'hex', name: 'HEX' });
+    const h = add({ t: 'hex', name: 'HEX', key: 'HEX' });
     [0, 1, 2, 3].forEach(k => { const d = driverOf(T.get('BCD' + k).net); if (d) dw.push({ from: d.id, to: h.id, port: k }); });
   }
   dzAutoLayout(nodes, dw);
+  // keep the arrangement you made: positions of parts and bend points of wires that are still there
+  const kept = nodes.filter(n => { const p = oldPos.get(n.key); if (p) { n.x = p.x; n.y = p.y; } return !!p; });
+  // a new part goes where the layout put it, moved down clear of the parts you placed
+  const box = n => { const g = dzGeom(n); return { x: n.x, y: n.y, w: g.w || 80, h: g.h || 40 }; };
+  const hit = (p, q) => p.x < q.x + q.w + 10 && q.x < p.x + p.w + 10 && p.y < q.y + q.h + 10 && q.y < p.y + p.h + 10;
+  for (const n of nodes) if (!kept.includes(n)) { while (kept.some(k => hit(box(n), box(k)))) n.y += 10; kept.push(n); }
+  const keyOf = new Map(nodes.map(n => [n.id, n.key]));
+  for (const w of dw) { const b = oldBends.get(`${keyOf.get(w.from)}>${keyOf.get(w.to)}:${w.port}`); if (b) w.pts = b.map(p => ({ ...p })); }
   return { nodes, wires: dw, seq, sig, bnodes };
 }
 // replaces the design with the one wired on the bench; returns false (and says why) when the bench can't be drawn
