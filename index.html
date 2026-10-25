@@ -480,8 +480,8 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>The design builder runs the same optimizer after a build when <b>Optimize placement and cable runs</b> is ticked. It fills one chip before starting the next, and it uses spare gates on chips it already needs (for example, a spare XOR with H as an inverter) before adding a module. In Settings you can stop it turning modules, or keep every gate where it is so that only modules move and cables are re-laid.</li>
     </ul>
     <h3>Printing a lab sheet</h3>
-    <ul><li><b>Wire it</b> (or <kbd>W</kbd>) builds the circuit on the bench with you, one cable at a time, It takes the cables off first (Undo puts them all back). <b>Best order</b> puts power in first, then short cables before long ones (a long cable arches over the board, so it goes in last and never covers a pin you still need), each starting close to where the last one ended, which is about a third of the hand travel of the printed list. <b>Printed list order</b> follows the wiring list on the lab sheet instead, signal by signal. Both pins of the next cable glow, with a faint ghost of the cable between them. Plug it in yourself (either header of a pin will do) and the guide moves on by itself, or press <b>Place it</b>. A cable that isn't in the circuit is pointed out. <b>Show me</b> moves the camera to the cable, and <b>Follow</b> does that at every step. <b>Back</b> takes the last cable off again. The arrow keys do the same: <kbd>→</kbd> places the next cable, <kbd>←</kbd> takes the last one off. The guide carries on where you left it after a reload.</li>
-    <li>The little receipt printer on top of the floppy drive makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
+    <ul><li><b>Wire it</b> (or <kbd>W</kbd>) builds the circuit on the bench with you, one cable at a time. It takes the cables off first (Undo puts them all back). <b>Best order</b> puts power in first, then short cables before long ones (a long cable arches over the board, so it goes in last and never covers a pin you still need), each starting close to where the last one ended, which is about a third of the hand travel of going signal by signal. <b>By signal</b> takes each signal from its source along its chain instead. The printed wiring list follows the order you pick here, so its numbers match the guide's. Both pins of the next cable glow, with a faint ghost of the cable between them. Plug it in yourself (either header of a pin will do) and the guide moves on by itself, or press <b>Place it</b>. A cable that isn't in the circuit is pointed out. <b>Show me</b> moves the camera to the cable, and <b>Follow</b> does that at every step. <b>Back</b> takes the last cable off again. The arrow keys do the same: <kbd>→</kbd> places the next cable, <kbd>←</kbd> takes the last one off. The guide carries on where you left it after a reload.</li>
+    <li>The little receipt printer on top of the floppy drive makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's in the same order as the wiring guide (<b>Wire it</b>), with the same numbers: in the best order, power first, then short, medium and long cables; by signal, constants, inputs and chip outputs, each signal along its chain. Either way you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
     <h3>The case</h3>
     <ul><li>Saving and loading happen on the floppy drive on the table behind the module rack. <b>SAVE</b> writes the bench to a file and <b>LOAD</b> reads one back (dropping a file on the page works too). Click the drive itself to copy the bench as text or paste one in. The floppies next to it hold the examples: click one to put it in the drive's slot, then press <b>LOAD</b> to load it (it replaces the bench, and Undo brings yours back). Click the floppy in the slot to take it back out.</li>
       <li>Press either latch on the front of the case to close the lid, and press it again to open it. While the lid is shut, the bench ignores clicks, but the circuit keeps running if MAINS is on.</li></ul>
@@ -548,7 +548,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
   <div id="gGroup" class="g-grp"></div>
   <div id="gStep" class="g-step"></div>
   <p id="gMsg" class="g-msg"></p>
-  <div class="g-row"><button id="gBack" title="Take the last cable off again (←)">‹ Back</button><button id="gLook" title="Move the camera to this cable">Show me</button><label class="g-follow"><input type="checkbox" id="gFollow"> Follow</label><select id="gOrder" title="Best: power first, then short cables before long ones (long cables arch over the top, so they go in last and don't cover pins you still need), each starting close to where the last one ended. Printed list: by signal, like the wiring list on the lab sheet."><option value="best">Best order</option><option value="list">Printed list order</option></select><span class="grow"></span><button id="gAll" title="Plug in every cable that's left">Place the rest</button><button id="gPlace" class="primary" title="Plug this cable in for me (→)">Place it ›</button></div>
+  <div class="g-row"><button id="gBack" title="Take the last cable off again (←)">‹ Back</button><button id="gLook" title="Move the camera to this cable">Show me</button><label class="g-follow"><input type="checkbox" id="gFollow"> Follow</label><select id="gOrder" title="The order of the cables, here and on the printed wiring list. Best: power first, then short cables before long ones (long cables arch over the top, so they go in last and don't cover pins you still need), each starting close to where the last one ended. By signal: each signal from its source along its chain."><option value="best">Best order</option><option value="list">By signal</option></select><span class="grow"></span><button id="gAll" title="Plug in every cable that's left">Place the rest</button><button id="gPlace" class="primary" title="Plug this cable in for me (→)">Place it ›</button></div>
 </section>
 
 <div id="dock" class="float">
@@ -4957,7 +4957,7 @@ function diagramSVG(src) {
     dzRender(true);
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const n of D.nodes) { const g = dzGeom(n); x0 = Math.min(x0, n.x - 10); y0 = Math.min(y0, n.y - 16); x1 = Math.max(x1, n.x + g.w + 10); y1 = Math.max(y1, n.y + g.h + 60); }
-    return { svg: `<svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" xmlns="http://www.w3.org/2000/svg">${dzRoot.innerHTML}</svg>`, what: 'Gate design from the designer. The bench was built from it.' };
+    return { svg: `<svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" xmlns="http://www.w3.org/2000/svg">${dzRoot.innerHTML}</svg>`, what: D.fromBench ? 'The circuit as it is wired on the bench, drawn as gates.' : 'Gate design from the designer. The bench was built from it.' };
   }
   lvBuild();
   if (!LV.W) return null;
@@ -5003,19 +5003,22 @@ function buildPrintSheet(o) {
   };
   if (o.diag) (o.wire ? left : right).push(diag());
   if (o.wire) {
-    const groups = wiringPlan();
+    // the same cables in the same order as the wiring guide (Wire it), so the numbers match
+    const steps = cableSteps(), best = steps.some(st => st.layer != null);
     const catName = ['Constants (0V / H / +5V rails)', 'Inputs (switches, pulses, clock)', 'Signals from the chips', 'Other'];
-    let h = `<h2>4 · Wiring list</h2><p>Top to bottom, tick each cable. M7 = module in slot 7. Each chip pin has two header pins: either free one will do. cm = rough cable length.</p>
+    const layerName = ['Power', 'Short cables', 'Medium cables', 'Long cables (in last: they arch over the others)'];
+    let h = `<h2>4 · Wiring list</h2><p>Top to bottom, tick each cable${best ? ': power first, then short cables before long ones, each starting near where the last one ended' : ', signal by signal'}. The numbers match Wire it. M7 = module in slot 7. Each chip pin has two header pins: either free one will do. cm = rough cable length.</p>
       <table class="wl"><thead><tr><th class="num">#</th><th class="tick">✓</th><th>Signal</th><th>From</th><th>Pin</th><th>Cable</th><th>To</th><th>Pin</th><th class="num">cm</th></tr></thead><tbody>`;
-    let i = 0, cat = -1;
-    for (const g of groups) {
-      if (g.cat !== cat) { cat = g.cat; h += `<tr class="pgrp"><td colspan="9">${catName[cat]}</td></tr>`; }
-      g.rows.forEach((r, k) => {
-        i++;
-        const cn = COLOR_NAMES.get(r.color) || hexCol(r.color);
-        h += `<tr><td class="num">${i}</td><td class="tick">☐</td>${k === 0 ? `<td class="sigc" rowspan="${g.rows.length}">${g.labelHTML}</td>` : ''}<td>${r.from.place}</td><td>${r.from.pin}</td><td><span class="sw" style="background:${hexCol(r.color)}"></span>${esc(cn)}</td><td>${r.to.place}</td><td>${r.to.pin}</td><td class="num">${r.len ? Math.ceil(r.len) : ''}</td></tr>`;
-      });
-    }
+    let grp = null;
+    steps.forEach((r, i) => {
+      const g = best ? layerName[r.layer] : catName[r.cat] || '';
+      if (g !== grp) { grp = g; if (g) h += `<tr class="pgrp"><td colspan="9">${g}</td></tr>`; }
+      // a signal's name once for a run of its cables in a row
+      const first = i === 0 || steps[i - 1].label !== r.label || (best ? steps[i - 1].layer !== r.layer : steps[i - 1].cat !== r.cat);
+      let span = 1; while (first && i + span < steps.length && steps[i + span].label === r.label && (best ? steps[i + span].layer === r.layer : steps[i + span].cat === r.cat)) span++;
+      const cn = COLOR_NAMES.get(r.color) || hexCol(r.color);
+      h += `<tr><td class="num">${i + 1}</td><td class="tick">☐</td>${first ? `<td class="sigc" rowspan="${span}">${r.label}</td>` : ''}<td>${r.from.place}</td><td>${r.from.pin}</td><td><span class="sw" style="background:${hexCol(r.color)}"></span>${esc(cn)}</td><td>${r.to.place}</td><td>${r.to.pin}</td><td class="num">${r.len ? Math.ceil(r.len) : ''}</td></tr>`;
+    });
     h += '</tbody></table>';
     right.push(h);
   }
@@ -5039,7 +5042,7 @@ function fitSheet() {
   return { zoom: z, fits };
 }
 function openPrint() {
-  if (!wires.length) { toast('Nothing is wired yet, so there is nothing to print.'); return; }
+  if (!wires.length && !GUIDE) { toast('Nothing is wired yet, so there is nothing to print.'); return; }
   $('#prTitle').value = benchTitle || (D.nodes.length && dzLive() ? 'Circuit from the designer' : 'UNILOG-2 circuit');
   $('#mPrint').hidden = false;
 }
@@ -5593,9 +5596,7 @@ const gFree = h => !h.wire ? h : [...H.values()].find(x => x.term === h.term && 
 function guideToggle() { if (GUIDE) guideStop(true); else guideStart(); }
 function guideStart() {
   if (!wires.length) { toast('There are no cables to guide you through. Load a circuit first (a floppy or a file), then press Wire it.', true); return; }
-  const plan = wiringPlan().flatMap(g => g.rows.map(r => ({ a: r.a, b: r.b, color: r.color, from: r.from, to: r.to, len: r.len, label: g.labelHTML })));
-  plan.forEach((st, i) => st.n = i);
-  const steps = guideOrder(plan, $('#gOrder').value);
+  const steps = cableSteps();
   pushUndo();
   for (const w of wires.slice()) removeWire(w);
   rebuild(); save(); select(null);
@@ -5628,12 +5629,20 @@ function guideResume() {
   $('#gFollow').checked = !!g.follow;
   $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); G3.group.visible = true;
 }
+// The cables on the bench as steps, in the order picked in the guide; the printed wiring list uses the same order, so
+// its numbers match the guide's. While the guide runs, the whole circuit is its list of steps.
+function cableSteps() {
+  if (GUIDE) return GUIDE.steps;
+  const plan = wiringPlan().flatMap(g => g.rows.map(r => ({ a: r.a, b: r.b, color: r.color, from: r.from, to: r.to, len: r.len, label: g.labelHTML, cat: g.cat })));
+  plan.forEach((st, i) => st.n = i);
+  return guideOrder(plan, $('#gOrder').value);
+}
 // The order to plug the cables in. 'list' is the printed wiring list (by signal). 'best' is for wiring by hand:
 // power first, then short cables before medium and long ones (a long cable arches over the board, so it goes in last
 // and never covers a pin you still need), and inside each of those the next cable starts as close as possible to
 // where the last one ended (it is turned round if its other end is nearer). `hand` is where the hand starts.
 function guideOrder(steps, mode, hand = null) {
-  if (mode === 'list') return steps.slice().sort((a, b) => a.n - b.n);
+  if (mode === 'list') return steps.slice().sort((a, b) => a.n - b.n).map(st => ({ ...st, layer: null }));
   const pos = st => [headerTop(gHeader(st.a), new THREE.Vector3()), headerTop(gHeader(st.b), new THREE.Vector3())];
   const flip = st => ({ ...st, a: st.b, b: st.a, from: st.to, to: st.from });
   const layer = st => {
@@ -5642,7 +5651,7 @@ function guideOrder(steps, mode, hand = null) {
     return pwr ? 0 : d < 7 ? 1 : d < 16 ? 2 : 3;
   };
   const layers = [[], [], [], []];
-  for (const st of steps) layers[layer(st)].push(st);
+  for (const st of steps) layers[layer(st)].push({ ...st, layer: layer(st) });
   const out = [];
   for (const L of layers) {
     if (!L.length) continue;
