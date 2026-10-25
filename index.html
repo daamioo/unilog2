@@ -58,6 +58,25 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 
 .ov{text-decoration:overline}
 
+#guide{left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 24px));padding:12px 14px;z-index:5}
+#guide header{display:flex;align-items:center;gap:10px}
+#guide header .grow,#guide .g-row .grow{flex:1}
+#gCount{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+#gClose{padding:2px 9px}
+.g-bar{height:4px;background:var(--panel-2);border-radius:2px;margin:9px 0 10px;overflow:hidden}
+.g-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.g-grp{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--f-display)}
+.g-step{display:flex;align-items:center;gap:10px;margin:6px 0 4px;font-size:15px;flex-wrap:wrap}
+.g-step .end{display:flex;flex-direction:column;line-height:1.25}
+.g-step .end small{color:var(--muted);font-size:12px}
+.g-step .arr{color:var(--accent);font-size:18px}
+.g-step .sw{width:12px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);flex:none}
+.g-step .meta{width:100%;color:var(--muted);font-size:12px}
+.g-msg{margin:6px 0 10px;font-size:13px;min-height:1.3em;color:var(--muted)}
+.g-msg.ok{color:var(--lo)}.g-msg.bad{color:var(--warn)}
+.g-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#gOrder{font-size:13px;padding:3px 6px}
+.g-follow{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px}
 #dock{left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:12px;align-items:center;padding:8px 12px;flex-wrap:wrap;right:auto;max-width:calc(100% - 24px)}
 #dock .lbl{font-family:var(--f-display);letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:var(--muted)}
 
@@ -457,10 +476,12 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
     <h3>Optimize</h3>
     <ul>
       <li><b>Optimize</b> on the top bar shortens the cable runs on any bench, whether you wired it by hand or the solver built it. It may move modules to other slots (empty ones too) and turn them 180°. It can also move a gate's job to an identical gate on the same or another chip of the same type, swap the inputs of symmetric gates, and re-lay every connection as the shortest chain the header pins allow. The circuit stays electrically the same. Modules that gain nothing from moving stay where they are, and Undo restores the old layout.</li>
+      <li><b>Recolour</b> on the top bar gives the cables colours that make the bench easy to read: +5V red and 0V black, as in the lab, and every cable of one signal the same colour, so you can follow its chain by eye. Signals whose cables run close together or meet on the same board get different colours, and colours that are easy to mix up (orange and yellow, grey and white) are kept apart too. With more signals than the eight other colours, the ones furthest apart share. Undo puts the old colours back.</li>
       <li>The design builder runs the same optimizer after a build when <b>Optimize placement and cable runs</b> is ticked. It fills one chip before starting the next, and it uses spare gates on chips it already needs (for example, a spare XOR with H as an inverter) before adding a module. In Settings you can stop it turning modules, or keep every gate where it is so that only modules move and cables are re-laid.</li>
     </ul>
     <h3>Printing a lab sheet</h3>
-    <ul><li>The little receipt printer on top of the floppy drive makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
+    <ul><li><b>Wire it</b> (or <kbd>W</kbd>) builds the circuit on the bench with you, one cable at a time, It takes the cables off first (Undo puts them all back). <b>Best order</b> puts power in first, then short cables before long ones (a long cable arches over the board, so it goes in last and never covers a pin you still need), each starting close to where the last one ended, which is about a third of the hand travel of the printed list. <b>Printed list order</b> follows the wiring list on the lab sheet instead, signal by signal. Both pins of the next cable glow, with a faint ghost of the cable between them. Plug it in yourself (either header of a pin will do) and the guide moves on by itself, or press <b>Place it</b>. A cable that isn't in the circuit is pointed out. <b>Show me</b> moves the camera to the cable, and <b>Follow</b> does that at every step. <b>Back</b> takes the last cable off again. The arrow keys do the same: <kbd>→</kbd> places the next cable, <kbd>←</kbd> takes the last one off. The guide carries on where you left it after a reload.</li>
+    <li>The little receipt printer on top of the floppy drive makes a one-page landscape sheet of what is on the bench, in two columns, shrunk to fit the page. It shows where each module goes (M1–M12, and whether it's turned), the truth table measured on the bench (or a clock-by-clock sequence for counters), the logic diagram, and a numbered wiring list. The list has one row per cable with a tick box, both ends (module, pin number and pin name) and the cable colour. It's grouped into constants, inputs and chip outputs, and follows each signal along its chain, so you can wire the real case from top to bottom. Choose "Save as PDF" in the print dialog to keep a copy.</li></ul>
     <h3>The case</h3>
     <ul><li>Saving and loading happen on the floppy drive on the table behind the module rack. <b>SAVE</b> writes the bench to a file and <b>LOAD</b> reads one back (dropping a file on the page works too). Click the drive itself to copy the bench as text or paste one in. The floppies next to it hold the examples: click one to put it in the drive's slot, then press <b>LOAD</b> to load it (it replaces the bench, and Undo brings yours back). Click the floppy in the slot to take it back out.</li>
       <li>Press either latch on the front of the case to close the lid, and press it again to open it. While the lid is shut, the bench ignores clicks, but the circuit keeps running if MAINS is on.</li></ul>
@@ -470,7 +491,7 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
       <li>On a module, type a pin number to go to that pin. <kbd>Enter</kbd> on a pin or a panel signal starts a cable, and <kbd>Enter</kbd> on another one finishes it. <kbd>Esc</kbd> goes from a pin back to its module.</li>
       <li>On the CAL knob or TIME / DIV, <kbd>+</kbd> and <kbd>-</kbd> turn it.</li>
       <li><kbd>1</kbd>–<kbd>8</kbd> flip the switches, <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>3</kbd> hold a pulse, <kbd>M</kbd> MAINS, <kbd>C</kbd> clock range, <kbd>[</kbd> <kbd>]</kbd> cable colour, <kbd>R</kbd> turns a module.</li>
-      <li><kbd>L</kbd> logic view and <kbd>T</kbd> truth table on the screen (press again to put them back), <kbd>H</kbd> this manual, <kbd>O</kbd> oscilloscope (press again, or <kbd>Esc</kbd>, to go back), <kbd>B</kbd> the default bench view. <kbd>P</kbd> prints, <kbd>Ctrl</kbd>+<kbd>S</kbd> saves and <kbd>Ctrl</kbd>+<kbd>O</kbd> loads a file.</li>
+      <li><kbd>L</kbd> logic view and <kbd>T</kbd> truth table on the screen (press again to put them back), <kbd>H</kbd> this manual, <kbd>O</kbd> oscilloscope (press again, or <kbd>Esc</kbd>, to go back), <kbd>B</kbd> the default bench view, <kbd>W</kbd> the wiring guide. <kbd>P</kbd> prints, <kbd>Ctrl</kbd>+<kbd>S</kbd> saves and <kbd>Ctrl</kbd>+<kbd>O</kbd> loads a file.</li>
     </ul>
     <h3>Camera</h3>
     <ul><li>Right-drag to orbit, middle-drag to pan, scroll to zoom. That works over the sheets and this pamphlet too. On touch screens, use two fingers. This pamphlet lies on the table to the right of the case.</li></ul>
@@ -484,7 +505,9 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
   <div class="tools">
     <button id="bUndo" title="Undo (Ctrl+Z)">Undo</button>
     <button id="bClear">Clear wires</button>
+    <button id="bGuide" aria-pressed="false" title="Wire the circuit on the bench step by step, one cable at a time (W)">Wire it</button>
     <button id="bOpt" title="Shorten the cable runs: rearranges modules and equivalent gates, then re-lays the cables. The circuit stays the same.">Optimize</button>
+    <button id="bColor" title="Recolour the cables so the bench is easy to read: +5V red, 0V black, each signal one colour, and signals that run close together in colours that don't look alike">Recolour</button>
     <button id="bLogic" aria-pressed="false" title="Open the logic view on the screen (L)">Logic view</button>
     <button id="bTT" aria-pressed="false" title="Open the truth table on the screen (T)">Truth table</button>
     <button id="bSet" aria-pressed="false">Settings</button>
@@ -517,6 +540,15 @@ select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
 <section id="lvPanel" class="float" hidden aria-label="Logic view and truth table">
   <header><div class="segm" role="group" aria-label="Show"><button id="spLv" aria-pressed="true">Logic view</button><button id="spTt" aria-pressed="false">Truth table</button></div><span class="grow"></span><button id="lvClose" title="Put both back on their sheets in the lid">Back on the sheets</button></header>
   <div class="lvp-body"></div>
+</section>
+
+<section id="guide" class="float" hidden aria-live="polite">
+  <header><h2>Wiring guide</h2><span id="gCount"></span><span class="grow"></span><button id="gClose" title="Close the guide (W)" aria-label="Close the guide">×</button></header>
+  <div class="g-bar"><i id="gProg"></i></div>
+  <div id="gGroup" class="g-grp"></div>
+  <div id="gStep" class="g-step"></div>
+  <p id="gMsg" class="g-msg"></p>
+  <div class="g-row"><button id="gBack" title="Take the last cable off again (←)">‹ Back</button><button id="gLook" title="Move the camera to this cable">Show me</button><label class="g-follow"><input type="checkbox" id="gFollow"> Follow</label><select id="gOrder" title="Best: power first, then short cables before long ones (long cables arch over the top, so they go in last and don't cover pins you still need), each starting close to where the last one ended. Printed list: by signal, like the wiring list on the lab sheet."><option value="best">Best order</option><option value="list">Printed list order</option></select><span class="grow"></span><button id="gAll" title="Plug in every cable that's left">Place the rest</button><button id="gPlace" class="primary" title="Plug this cable in for me (→)">Place it ›</button></div>
 </section>
 
 <div id="dock" class="float">
@@ -2520,6 +2552,8 @@ window.addEventListener('wheel', e => {
 }, { capture: true, passive: false });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea,select')) return;
+  // while the wiring guide is open, → plugs in the next cable and ← takes the last one off again
+  if (GUIDE && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); if (e.key === 'ArrowRight') guidePlace(false); else guideBack(); return; }
   if (kbKey(e)) return;   // focus moves and Enter in the 3D view (see KEYBOARD)
   // undo and delete go to the designer after you last worked on it, on its sheet or in its panel
   const inDesign = LV.dz && (PAPER.focus === 'diag' || PAPER.focus === 'lvui');
@@ -2552,7 +2586,7 @@ window.addEventListener('keydown', e => {
    TOOLBAR WIRING
    ================================================================ */
 function loadExample(k) {
-  pushUndo();
+  guideStop(); pushUndo();
   const ex = EXAMPLES[k];
   deserialize({ modules: ex.modules, wires: ex.wires, sw: ex.sw || [0,0,0,0,0,0,0,0], range: ex.range != null ? ex.range : S.range, mains: true });
   save(); toast(EX_NOTES[k]);
@@ -2624,7 +2658,7 @@ function loadText(txt) {
     const d = JSON.parse(txt); if (!d || !Array.isArray(d.modules)) throw 0;
     // a different bench: its diagram is laid out afresh, not fitted around where you put the last one's parts
     D.arranged = false;
-    pushUndo(); const info = deserialize(d); save();
+    guideStop(); pushUndo(); const info = deserialize(d); save();
     const uniq = a => [...new Set(a)].join(', ');
     if (info.legacy.length) setTimeout(() => toast(`This bench uses ${uniq(info.legacy)}, which ${info.legacy.length > 1 ? 'are' : 'is'} not in the lab set (not in the photos of the case or the module box). It still works here, but you won't find it in the lab.`, true), 400);
     if (info.unknown.length) setTimeout(() => toast(`Skipped chips this version doesn't know: ${uniq(info.unknown)}.`, true), 800);
@@ -3619,6 +3653,7 @@ function optimize(list, keep) {
 const SLOT_PREF = [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
 function dzFail(msg) { const m = $('#dzMsg'); m.textContent = msg; m.classList.add('bad'); toast(msg, true); return false; }
 function dzBuild(skipOpt, noSplit) {
+  guideStop();
   $('#dzMsg').classList.remove('bad');
   const byId = new Map(D.nodes.map(n => [n.id, n]));
   const drvOf = new Map(D.wires.map(w => [w.to + ':' + w.port, w.from]));
@@ -3851,11 +3886,73 @@ function dzBuild(skipOpt, noSplit) {
 }
 $('#dzBuild').onclick = () => dzBuild();
 $('#bOpt').onclick = () => {
+  if (GUIDE) { toast('Close the wiring guide first: Optimize would move the cables it is guiding you through.', true); return; }
   const b = $('#bOpt'); b.disabled = true; b.textContent = 'Optimizing…';
   setTimeout(() => {   // let the button repaint before the search runs
     try { optimizeBench(); } finally { b.disabled = false; b.textContent = 'Optimize'; }
   }, 30);
 };
+
+/* ---------- cable colours ----------
+   Every cable of a signal gets the same colour, so a chain can be followed by eye; +5V is red and 0V black, as in the
+   lab. The other eight colours go to the signals so that two signals whose cables run close together, or meet on the
+   same board, differ, and colours that are easy to mix up (orange and yellow, grey and white, brown and black...)
+   count as a quarter of a clash. A greedy start, then local search, minimises the clashes. */
+const SIG_COLORS = ['Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Brown', 'Grey', 'White'].map(n => WIRE_COLORS.find(c => c[0] === n)[1]);
+const COL_RED = 0xc8241f, COL_BLACK = 0x1d1d1d;
+const LOOKALIKE = new Map([['Orange|Yellow', 0.25], ['Orange|Red', 0.25], ['Brown|Black', 0.25], ['Grey|White', 0.25], ['Blue|Purple', 0.15], ['Brown|Orange', 0.12], ['Black|Grey', 0.1]]);
+function colourClash(a, b) {
+  if (a === b) return 1;
+  const na = COLOR_NAMES.get(a), nb = COLOR_NAMES.get(b);
+  return LOOKALIKE.get(na + '|' + nb) || LOOKALIKE.get(nb + '|' + na) || 0;
+}
+function recolourCables() {
+  if (!wires.length) { toast('There are no cables to recolour.'); return; }
+  rebuild();
+  const nets = [], netOf = new Map();
+  for (const w of wires) {
+    const n = H.get(w.a).term.net;
+    if (!netOf.has(n)) { netOf.set(n, nets.length); nets.push({ n, ws: [], fixed: null }); }
+    nets[netOf.get(n)].ws.push(w);
+  }
+  for (const x of nets) { const ids = x.n.terms.map(t => t.id); x.fixed = ids.includes('VCC') ? COL_RED : ids.includes('GND') ? COL_BLACK : null; }
+  // how much two signals get in each other's way: cables close together (sampled along their arcs), and ends on one board
+  const samp = nets.map(x => x.ws.flatMap(w => { const p = w.tube.geometry.parameters && w.tube.geometry.parameters.path; return p ? [0.1, 0.3, 0.5, 0.7, 0.9].map(t => p.getPoint(t)) : []; }));
+  const boards = nets.map(x => new Set(x.ws.flatMap(w => [H.get(w.a), H.get(w.b)].filter(h => h.mod).map(h => h.mod.uid))));
+  const W = nets.map(() => new Float64Array(nets.length));
+  for (let i = 0; i < nets.length; i++) for (let j = i + 1; j < nets.length; j++) {
+    let wt = 0;
+    for (const p of samp[i]) for (const q of samp[j]) { const d = p.distanceTo(q); if (d < 4) wt += 1 - d / 4; }
+    for (const u of boards[i]) if (boards[j].has(u)) wt += 0.5;
+    W[i][j] = W[j][i] = wt;
+  }
+  const col = nets.map(x => x.fixed);
+  // power runs past every chip, so looking a bit like red or black (orange, brown, grey) matters less than a real clash
+  const cost = (i, c) => { let s = 0; for (let j = 0; j < nets.length; j++) if (j !== i && col[j] != null && W[i][j]) s += W[i][j] * colourClash(c, col[j]) * (nets[j].fixed != null ? 0.2 : 1); return s; };
+  // most entangled signals choose first; a colour already in use costs a little, so they spread over the palette
+  const free = nets.map((x, i) => i).filter(i => nets[i].fixed == null).sort((a, b) => W[b].reduce((s, v) => s + v, 0) - W[a].reduce((s, v) => s + v, 0));
+  const uses = c => col.filter(x => x === c).length * 0.01;
+  for (const i of free) { let bc = null, bv = Infinity; for (const c of SIG_COLORS) { const v = cost(i, c) + uses(c); if (v < bv) { bv = v; bc = c; } } col[i] = bc; }
+  for (let pass = 0; pass < 20; pass++) {
+    let better = false;
+    for (const i of free) {
+      const cur = col[i]; col[i] = null;
+      let bc = cur, bv = cost(i, cur) - 1e-9;
+      for (const c of SIG_COLORS) { const v = cost(i, c); if (v < bv) { bv = v; bc = c; } }
+      col[i] = bc; if (bc !== cur) better = true;
+    }
+    if (!better) break;
+  }
+  let clashes = 0;
+  for (let i = 0; i < nets.length; i++) for (let j = i + 1; j < nets.length; j++) if (W[i][j] >= 0.5 && col[i] === col[j]) clashes++;
+  pushUndo();
+  nets.forEach((x, i) => x.ws.forEach(w => { w.color = col[i]; w.mat.color.setHex(col[i]); w.glow = '?'; }));
+  if (GUIDE) { for (const st of GUIDE.steps) { const k = netOf.get(gHeader(st.a).term.net); if (k != null) st.color = col[k]; } guideSave(); GUIDE.ver = -1; }
+  save(); invalidate();
+  const sig = nets.filter(x => x.fixed == null).length, used = new Set(col.filter((c, i) => nets[i].fixed == null)).size;
+  toast(`Cables recoloured: +5V red, 0V black, ${sig} signal${sig === 1 ? '' : 's'} in ${used} colour${used === 1 ? '' : 's'}${clashes ? `. ${clashes} pair${clashes === 1 ? '' : 's'} of neighbouring signals had to share a colour` : ', and no two signals that run close together share one'}. Undo puts the old colours back.`);
+}
+$('#bColor').onclick = recolourCables;
 
 /* ---------- placement & cable-run optimizer ----------
    Works on any bench. Keeps every net electrically identical, but may move modules between slots (and into empty
@@ -4801,7 +4898,7 @@ function wiringPlan() {
         if (seen.has(w)) continue; seen.add(w);
         const ha = H.get(w.a), hb = H.get(w.b), fromH = ha.term.id === t ? ha : hb, toH = fromH === ha ? hb : ha;
         const len = w.tube.geometry.parameters && w.tube.geometry.parameters.path ? w.tube.geometry.parameters.path.getLength() + 2.8 : 0;
-        rows.push({ from: endText(fromH), to: endText(toH), color: w.color, len });
+        rows.push({ from: endText(fromH), to: endText(toH), color: w.color, len, a: hidToSer(fromH.id), b: hidToSer(toH.id) });
         if (!visited.has(toH.term.id)) { visited.add(toH.term.id); walk(toH.term.id); }
       }
     };
@@ -5389,6 +5486,7 @@ function kbShortcut(e) {
   const d = /^Digit([1-3])$/.exec(e.code);
   if (e.shiftKey && d) { if (!e.repeat) { KB.shiftPulse = +d[1] - 1; pressControl({ kind: 'pulse', i: KB.shiftPulse }); } return true; }
   if (k === 't') { lvPanelToggle('tt'); return true; }
+  if (k === 'w') { guideToggle(); return true; }
   const view = { h: 'sheet:help', o: 'scope' }[k];
   if (view) { camToggle(view); return true; }
   if (k === 'b') { goView('bench'); return true; }
@@ -5441,6 +5539,7 @@ function frame(now) {
   guard('design from the bench', benchDesignTick);
   guard('logic view', () => { if (LV.open) lvFrame(); });
   guard('papers', paperTick);
+  guard('wiring guide', guideTick);
   guard('lid', () => stepLid(dt)); guard('floppy drive', () => stepFloppy(dt));
   if (camAnim) {
     camAnim.t = Math.min(1, camAnim.t + dt / 0.6); const e = 1 - Math.pow(1 - camAnim.t, 3);
@@ -5468,6 +5567,213 @@ function guard(name, fn) {
 let frames = 0, fpsT = performance.now(), drawFps = 0;
 
 /* ================================================================
+   WIRING GUIDE: put a saved circuit together on the case one cable at a time. Starting it takes the cables off
+   (Undo puts them all back) and lists them in the order of the printed wiring list: power first, then each signal
+   along its chain. Both ends of the next cable glow on the case. Plug it in yourself (either header of a pin will do)
+   and the guide moves on, or let it place the cable. A cable that isn't in the circuit is pointed out.
+   ================================================================ */
+let GUIDE = null;   // { steps: [{ a, b, color, from, to, label, len }], sig, cur, ver, done: [], extra: [], msg }
+const modSig = () => modules.map(m => m.slot + ':' + m.type).sort().join(',');
+const G3 = { group: new THREE.Group(), rings: [], ghost: null };
+G3.group.visible = false; scene.add(G3.group);
+{
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffc94a, transparent: true, depthTest: false });
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffc94a, transparent: true, opacity: 0.35, depthWrite: false });
+  for (let i = 0; i < 2; i++) {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.07, 8, 28), ringMat); ring.rotation.x = -Math.PI / 2; ring.renderOrder = 10;
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.2, 8), beamMat); beam.position.y = 1.8;
+    g.add(ring, beam); G3.group.add(g); G3.rings.push(g);
+  }
+}
+const gHeader = id => { const hid = serToHid(id); return hid ? H.get(hid) : null; };
+const gKey = (ha, hb) => [ha.term.id, hb.term.id].sort().join('|');
+// a free header on the same pin (each chip pin has two)
+const gFree = h => !h.wire ? h : [...H.values()].find(x => x.term === h.term && !x.wire) || null;
+function guideToggle() { if (GUIDE) guideStop(true); else guideStart(); }
+function guideStart() {
+  if (!wires.length) { toast('There are no cables to guide you through. Load a circuit first (a floppy or a file), then press Wire it.', true); return; }
+  const plan = wiringPlan().flatMap(g => g.rows.map(r => ({ a: r.a, b: r.b, color: r.color, from: r.from, to: r.to, len: r.len, label: g.labelHTML })));
+  plan.forEach((st, i) => st.n = i);
+  const steps = guideOrder(plan, $('#gOrder').value);
+  pushUndo();
+  for (const w of wires.slice()) removeWire(w);
+  rebuild(); save(); select(null);
+  GUIDE = { steps, sig: modSig(), cur: 0, ver: -1, done: [], extra: [], msg: '' };
+  guideSave();
+  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true');
+  G3.group.visible = true;
+  toast(`Wiring guide: ${steps.length} cable${steps.length === 1 ? '' : 's'}, one at a time. The cables were taken off the case; Undo puts them all back.`);
+}
+function guideStop(said) {
+  if (!GUIDE) return;
+  const left = GUIDE.steps.length - GUIDE.done.filter(Boolean).length;
+  GUIDE = null; guideSave();
+  $('#guide').hidden = true; $('#bGuide').setAttribute('aria-pressed', 'false');
+  G3.group.visible = false; if (G3.ghost) { G3.group.remove(G3.ghost); G3.ghost.geometry.dispose(); G3.ghost = null; }
+  invalidate();
+  if (said) toast(left ? `Wiring guide closed with ${left} cable${left === 1 ? '' : 's'} still to go.` : 'Wiring guide closed.');
+}
+function guideSave() {
+  try {
+    if (GUIDE) localStorage.setItem('unilog2.guide.v1', JSON.stringify({ steps: GUIDE.steps, sig: GUIDE.sig, follow: $('#gFollow').checked }));
+    else localStorage.removeItem('unilog2.guide.v1');
+  } catch (_) {}
+}
+// after a reload the guide carries on, if the case still holds the same modules
+function guideResume() {
+  let g = null; try { g = JSON.parse(localStorage.getItem('unilog2.guide.v1') || 'null'); } catch (_) {}
+  if (!g || !Array.isArray(g.steps) || g.sig !== modSig()) { try { localStorage.removeItem('unilog2.guide.v1'); } catch (_) {} return; }
+  GUIDE = { steps: g.steps, sig: g.sig, cur: 0, ver: -1, done: [], extra: [], msg: '' };
+  $('#gFollow').checked = !!g.follow;
+  $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); G3.group.visible = true;
+}
+// The order to plug the cables in. 'list' is the printed wiring list (by signal). 'best' is for wiring by hand:
+// power first, then short cables before medium and long ones (a long cable arches over the board, so it goes in last
+// and never covers a pin you still need), and inside each of those the next cable starts as close as possible to
+// where the last one ended (it is turned round if its other end is nearer). `hand` is where the hand starts.
+function guideOrder(steps, mode, hand = null) {
+  if (mode === 'list') return steps.slice().sort((a, b) => a.n - b.n);
+  const pos = st => [headerTop(gHeader(st.a), new THREE.Vector3()), headerTop(gHeader(st.b), new THREE.Vector3())];
+  const flip = st => ({ ...st, a: st.b, b: st.a, from: st.to, to: st.from });
+  const layer = st => {
+    const [pa, pb] = pos(st), pwr = [st.a, st.b].some(x => gHeader(x).term.role === 'pwr');
+    const d = pa.distanceTo(pb);
+    return pwr ? 0 : d < 7 ? 1 : d < 16 ? 2 : 3;
+  };
+  const layers = [[], [], [], []];
+  for (const st of steps) layers[layer(st)].push(st);
+  const out = [];
+  for (const L of layers) {
+    if (!L.length) continue;
+    const P = L.map(pos);
+    // nearest neighbour from every possible first cable (either way round); keep the shortest total hand travel
+    let best = null, bestCost = Infinity;
+    for (let s0 = 0; s0 < L.length; s0++) for (const f0 of [0, 1]) {
+      const used = new Array(L.length).fill(false), seq = [[s0, f0]];
+      used[s0] = true;
+      let cost = hand ? hand.distanceTo(P[s0][f0]) : 0, at = P[s0][1 - f0];
+      for (let k = 1; k < L.length; k++) {
+        let bi = -1, bf = 0, bd = Infinity;
+        for (let i = 0; i < L.length; i++) if (!used[i]) for (const f of [0, 1]) { const d = at.distanceTo(P[i][f]); if (d < bd) { bd = d; bi = i; bf = f; } }
+        used[bi] = true; seq.push([bi, bf]); cost += bd; at = P[bi][1 - bf];
+      }
+      if (cost < bestCost) { bestCost = cost; best = seq; }
+    }
+    for (const [i, f] of best) out.push(f ? flip(L[i]) : L[i]);
+    const last = best[best.length - 1]; hand = P[last[0]][1 - last[1]];
+  }
+  return out;
+}
+// changing the order keeps the cables already in, and reorders the rest from where the last one ended
+function guideReorder() {
+  const G = GUIDE; if (!G) return;
+  try { localStorage.setItem('unilog2.guide.order', $('#gOrder').value); } catch (_) {}
+  const done = G.steps.filter((_, i) => G.done[i]), rest = G.steps.filter((_, i) => !G.done[i]);
+  const lastDone = done[done.length - 1], hand = lastDone ? headerTop(gHeader(lastDone.b), new THREE.Vector3()) : null;
+  G.steps = done.concat(guideOrder(rest, $('#gOrder').value, hand));
+  G.ver = -1; G.msg = ''; guideSave();
+  if (G.cur < G.steps.length) G.cur = done.length;
+}
+// which steps are plugged in (matched pin to pin, in either direction), and which cables don't belong
+function guideSync() {
+  const G = GUIDE;
+  if (modSig() !== G.sig || G.steps.some(st => !gHeader(st.a) || !gHeader(st.b))) { guideStop(); toast('The modules in the case changed, so the wiring guide stopped.', true); return; }
+  const have = new Map();
+  for (const w of wires) { const k = gKey(H.get(w.a), H.get(w.b)); if (!have.has(k)) have.set(k, []); have.get(k).push(w); }
+  G.done = G.steps.map(st => { const l = have.get(gKey(gHeader(st.a), gHeader(st.b))); return l && l.length ? l.shift() : null; });
+  G.extra = [...have.values()].flat();
+  const was = G.cur;
+  G.cur = G.done.findIndex(w => !w); if (G.cur < 0) G.cur = G.steps.length;
+  if (G.placing) G.placing = false;
+  else if (G.cur > was && G.done[was]) G.msg = `✓ Cable ${was + 1} is in.`;
+  else if (G.cur !== was) G.msg = '';
+  guideShow();
+  if ($('#gFollow').checked && G.cur !== was && G.cur < G.steps.length) guideLook();
+}
+function guideShow() {
+  const G = GUIDE, n = G.steps.length, nDone = G.done.filter(Boolean).length, st = G.steps[G.cur];
+  $('#gCount').textContent = st ? `cable ${G.cur + 1} of ${n}` : `${n} of ${n}`;
+  $('#gProg').style.width = (100 * nDone / Math.max(1, n)) + '%';
+  const endH = e => `<span class="end"><span>${e.place}</span><small>${e.pin}</small></span>`;
+  if (st) {
+    $('#gGroup').innerHTML = st.label;
+    $('#gStep').innerHTML = `<span class="sw" style="background:${hexCol(st.color)}"></span>${endH(st.from)}<span class="arr">→</span>${endH(st.to)}`
+      + `<span class="meta">${esc(COLOR_NAMES.get(st.color) || 'cable')}${st.len ? ` · about ${Math.ceil(st.len)} cm` : ''}${nDone > G.cur ? ` · ${nDone - G.cur} later cable${nDone - G.cur === 1 ? ' is' : 's are'} already in` : ''}</span>`;
+  } else {
+    $('#gGroup').textContent = 'Done';
+    $('#gStep').innerHTML = `<span>All ${n} cables are in: the circuit is complete.${S.mains ? '' : ' Switch MAINS on to try it.'}</span>`;
+  }
+  const m = $('#gMsg');
+  if (G.extra.length) {
+    const w = G.extra[0], a = endText(H.get(w.a)), b = endText(H.get(w.b));
+    m.className = 'g-msg bad';
+    m.innerHTML = `This cable isn't in the circuit: ${a.place} ${a.pin} → ${b.place} ${b.pin}. Double-click it to unplug it.${G.extra.length > 1 ? ` (${G.extra.length - 1} more like it.)` : ''}`;
+  } else if (G.msg) { m.className = 'g-msg ok'; m.textContent = G.msg; }
+  else { m.className = 'g-msg'; m.textContent = st ? 'Plug it in on the case (either header of a pin will do), or press Place it.' : ''; }
+  $('#gPlace').disabled = $('#gAll').disabled = $('#gLook').disabled = !st;
+  $('#gBack').disabled = !G.done.some(Boolean);
+  // the glowing ends and a faint ghost of the cable
+  if (G3.ghost) { G3.group.remove(G3.ghost); G3.ghost.geometry.dispose(); G3.ghost = null; }
+  G3.rings.forEach(r => r.visible = !!st);
+  if (st) {
+    const ha = gFree(gHeader(st.a)) || gHeader(st.a), hb = gFree(gHeader(st.b)) || gHeader(st.b);
+    const pa = headerTop(ha, new THREE.Vector3()), pb = headerTop(hb, new THREE.Vector3());
+    G3.rings[0].position.copy(pa); G3.rings[1].position.copy(pb);
+    pa.y += 0.35; pb.y += 0.35;
+    G3.ghost = new THREE.Mesh(new THREE.TubeGeometry(wireCurve(pa, pb, 0), 36, 0.07, 6, false),
+      new THREE.MeshBasicMaterial({ color: st.color, transparent: true, opacity: 0.4, depthWrite: false }));
+    G3.group.add(G3.ghost);
+  }
+  invalidate();
+}
+function guideTick() {
+  if (!GUIDE) return;
+  if (GUIDE.ver !== benchVersion) { GUIDE.ver = benchVersion; guideSync(); if (!GUIDE) return; }
+  const s = 1 + 0.22 * Math.sin(performance.now() / 170);
+  G3.rings.forEach(r => r.children[0].scale.set(s, s, s));
+  invalidate();
+}
+function guidePlace(all) {
+  const G = GUIDE; if (!G || G.cur >= G.steps.length) return;
+  pushUndo();
+  let failed = 0;
+  for (let i = G.cur; i < G.steps.length; i++) {
+    if (G.done[i]) continue;
+    const st = G.steps[i], ha = gFree(gHeader(st.a)), hb = gFree(gHeader(st.b));
+    if (!ha || !hb || !addWire(ha.id, hb.id, st.color)) failed++;
+    if (!all) break;
+  }
+  G.placing = true; G.msg = '';
+  rebuild(); save();
+  if (failed) toast(`Couldn't place ${failed === 1 ? 'that cable' : failed + ' cables'}: both headers of a pin are already taken. Unplug the cable that doesn't belong there.`, true);
+}
+function guideBack() {
+  const G = GUIDE; if (!G) return;
+  let j = -1;
+  for (let i = G.steps.length - 1; i >= 0; i--) if (G.done[i] && (i < G.cur || j < 0)) { j = i; if (i < G.cur) break; }
+  if (j < 0) return;
+  pushUndo(); removeWire(G.done[j]); G.placing = true; G.msg = `Cable ${j + 1} is off again.`; rebuild(); save();
+}
+// the camera looks down at the cable, from the front, far enough back to see both ends
+function guideLook() {
+  const G = GUIDE, st = G && G.steps[G.cur]; if (!st) return;
+  const pa = headerTop(gHeader(st.a), new THREE.Vector3()), pb = headerTop(gHeader(st.b), new THREE.Vector3());
+  const tgt = pa.clone().add(pb).multiplyScalar(0.5), d = Math.max(22, pa.distanceTo(pb) * 1.4);
+  camView = 'free'; $('#vBack').hidden = true;
+  camGlide(new THREE.Vector3(tgt.x, tgt.y + d * 0.95, tgt.z + d * 0.6), tgt);
+}
+$('#bGuide').onclick = guideToggle;
+$('#gClose').onclick = () => guideStop(true);
+$('#gPlace').onclick = () => guidePlace(false);
+$('#gAll').onclick = () => guidePlace(true);
+$('#gBack').onclick = guideBack;
+$('#gLook').onclick = guideLook;
+try { $('#gOrder').value = localStorage.getItem('unilog2.guide.order') || 'best'; } catch (_) {}
+$('#gOrder').onchange = guideReorder;
+$('#gFollow').onchange = () => { guideSave(); if ($('#gFollow').checked) guideLook(); };
+
+/* ================================================================
    BOOT
    ================================================================ */
 function boot(data) {
@@ -5478,6 +5784,7 @@ function boot(data) {
   else { const ex = EXAMPLES.xor; deserialize({ modules: ex.modules, wires: ex.wires, sw: ex.sw, range: 0, mains: true }); setTimeout(() => toast(EX_NOTES.xor + ' To start from scratch, put the "Empty bench" floppy in the drive and press LOAD.'), 600); }
   let q = 'balanced'; try { q = localStorage.getItem('unilog2.quality') || q; } catch (_) {}
   applyQuality(q);
+  guideResume();
   goView('bench', true);
   requestAnimationFrame(t => { lastT = t; frame(t); });
 }

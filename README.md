@@ -19,10 +19,11 @@ The rest of the bench is around the case:
 - the lab manual, with the help and a datasheet for every chip
 - an oscilloscope
 - a floppy drive for saving and loading, the example circuits on floppies next to it, and a little printer that prints a wiring list you can follow on the real case
+- a wiring guide that walks you through a saved circuit cable by cable, with both pins lit up on the case
 
 ## Controls
 
-Click a pin, then another pin, to run a cable. Right-drag turns the view, middle-drag pans and scroll zooms. The manual on the table explains the rest.
+Click a pin, then another pin, to run a cable. Recolour on the top bar colours the cables so they're easy to follow: power red and black, one colour per signal, and neighbouring signals in different colours. Right-drag turns the view, middle-drag pans and scroll zooms. The manual on the table explains the rest.
 
 It works from the keyboard too. Tab into the bench, move with Tab or the arrow keys and press Enter to use something. On a module, type a pin number to jump to that pin.
 
@@ -39,6 +40,8 @@ It works from the keyboard too. Tab into the bench, move with Tab or the arrow k
 | H / O | manual / oscilloscope |
 | Esc | back from a close-up |
 | B | default bench view |
+| W | wiring guide |
+| ← / → | wiring guide: back / next cable |
 | P | print |
 | Ctrl+S / Ctrl+O | save / load a file |
 | Ctrl+Z | undo |
