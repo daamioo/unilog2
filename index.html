@@ -2589,6 +2589,7 @@ function loadExample(k) {
   guideStop(); pushUndo();
   const ex = EXAMPLES[k];
   deserialize({ modules: ex.modules, wires: ex.wires, sw: ex.sw || [0,0,0,0,0,0,0,0], range: ex.range != null ? ex.range : S.range, mains: true });
+  dzNewBench();
   save(); toast(EX_NOTES[k]);
   if (k === 'cnt') toggleScope(true);
 }
@@ -2625,7 +2626,7 @@ function applyQuality(q) {
 }
 $('#optQ').onchange = e => { applyQuality(e.target.value); try { localStorage.setItem('unilog2.quality', e.target.value); } catch (_) {} };
 function exportBench(title) {
-  const design = { nodes: D.nodes, wires: D.wires, seq: D.seq };
+  const design = { nodes: D.nodes, wires: D.wires, seq: D.seq, fromBench: !!D.fromBench && !D.changed, arranged: !!D.arranged };
   if (dzLive()) {
     const sig = {};
     for (const k in D.built.sig) {
@@ -2656,9 +2657,7 @@ $('#bDl').onclick = () => {
 function loadText(txt) {
   try {
     const d = JSON.parse(txt); if (!d || !Array.isArray(d.modules)) throw 0;
-    // a different bench: its diagram is laid out afresh, not fitted around where you put the last one's parts
-    D.arranged = false;
-    guideStop(); pushUndo(); const info = deserialize(d); save();
+    guideStop(); pushUndo(); const info = deserialize(d); save(); dzNewBench();
     const uniq = a => [...new Set(a)].join(', ');
     if (info.legacy.length) setTimeout(() => toast(`This bench uses ${uniq(info.legacy)}, which ${info.legacy.length > 1 ? 'are' : 'is'} not in the lab set (not in the photos of the case or the module box). It still works here, but you won't find it in the lab.`, true), 400);
     if (info.unknown.length) setTimeout(() => toast(`Skipped chips this version doesn't know: ${uniq(info.unknown)}.`, true), 800);
@@ -2666,6 +2665,8 @@ function loadText(txt) {
     if (info.newer) setTimeout(() => toast(`This file was saved by a newer version of the simulator (format ${d.v}). Most of it loaded, but some details may be missing.`, true), 1200);
     if (d.design) {
       dzLoad(d.design);
+      // a design of its own (not just the bench drawn as gates) waits for Build instead of following the bench
+      D.changed = !d.design.fromBench && !(d.design.built && d.design.built.sig);
       // a saved build mapping lets the design show live levels straight away (module terms are stored by slot)
       if (d.design.built && d.design.built.sig) {
         const sig = {};
@@ -3380,7 +3381,17 @@ function dzSnapshot() { return JSON.stringify({ nodes: D.nodes, wires: D.wires, 
 function dzPush() { DZ.undo.push(dzSnapshot()); if (DZ.undo.length > 60) DZ.undo.shift(); }
 function dzUndo() {
   if (!DZ.undo.length) { toast('Nothing to undo in the design.'); return; }
-  const s = JSON.parse(DZ.undo.pop()); D.nodes = s.nodes; D.wires = s.wires; D.seq = s.seq; DZ.sel = null; dzChanged();
+  const s = JSON.parse(DZ.undo.pop()); D.nodes = s.nodes; D.wires = s.wires; D.seq = s.seq; DZ.sel = null;
+  // back to a design that followed the bench (say, before a part was moved): it follows the bench again, drawn the
+  // way it was then, rather than becoming a design of its own that the bench no longer matches
+  if (s.fromBench && wires.length) { D.arranged = !!s.arranged; if (designFromBench(false)) return; }
+  dzChanged();
+}
+// a bench loaded from a file, a floppy or an example replaces the logic view too: it is drawn afresh from the new
+// bench, even if the old design had edits of its own (Undo in the designer brings that design back)
+function dzNewBench() {
+  if (D.nodes.length) dzPush();
+  D.changed = false; D.built = null; D.fromBench = false; D.arranged = false;
 }
 function dzSave() { DZ.ver++; try { localStorage.setItem('unilog2.design.v1', dzSnapshot()); } catch (_) {} }
 function dzLoad(s) { if (!s || !Array.isArray(s.nodes)) return; D.nodes = s.nodes; D.wires = s.wires || []; D.seq = s.seq || (Math.max(0, ...s.nodes.map(n => n.id)) + 1); D.built = null; D.fromBench = !!s.fromBench; D.arranged = !!s.arranged; DZ.sel = null; }
@@ -3498,7 +3509,7 @@ const dzEnd = e => {
   if (d.mode === 'wire') {
     const inEl = el && el.closest && el.closest('[data-in]');
     if (inEl) { const [id, port] = inEl.dataset.in.split(':').map(Number); if (!d.picked) dzPush(); D.wires = D.wires.filter(w => !(w.to === id && w.port === port)); D.wires.push({ from: d.from, to: id, port }); }
-    dzChanged();
+    if (inEl || d.picked) dzChanged(); else dzRender();
   } else if (d.mode === 'wireRev') {
     const outEl = el && el.closest && el.closest('[data-out]');
     if (outEl) { dzPush(); D.wires = D.wires.filter(w => !(w.to === d.to && w.port === d.port)); D.wires.push({ from: +outEl.dataset.out, to: d.to, port: d.port }); dzChanged(); }
