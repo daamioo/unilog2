@@ -891,7 +891,7 @@ const fill = new THREE.DirectionalLight(0xbcd0ff, 0.28); fill.position.set(45, 3
 
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = Math.round(w); c.height = Math.round(h);
-  const g = c.getContext('2d'); draw(g, c);
+  const g = c.getContext('2d', { willReadFrequently: true }); draw(g, c);   // software canvas: Firefox's GPU canvases come out red/blue swapped as WebGL textures
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = MAX_ANISO;
   return t;
 }
@@ -1807,7 +1807,7 @@ function pruneScope(L) {
 const TDIVS = [[1e-6, '1 µs'], [1e-5, '10 µs'], [1e-4, '100 µs'], [1e-3, '1 ms'], [1e-2, '10 ms'], [0.1, '100 ms'], [0.5, '0.5 s']];
 const SC = { div: 6, trig: 'a' };   // div: index into TDIVS
 const scv = document.createElement('canvas'); scv.width = 840; scv.height = 420;
-const sg2 = scv.getContext('2d');
+const sg2 = scv.getContext('2d', { willReadFrequently: true });
 function drawScope() {
   const div = TDIVS[SC.div][0], L = div * 10, W = scv.width, Hh = scv.height;
   pruneScope(L);
@@ -2817,7 +2817,7 @@ function ribbonMesh(curve, width, mat) {
 // the receipt texture: a short dot-matrix printout, or blank paper before anything has been printed
 const RECEIPT_MAX = 9;   // cm of paper the printer feeds out for one job
 function receipt(o) {
-  const c = FD.rc.getContext('2d'), W = FD.rc.width, H = FD.rc.height;
+  const c = FD.rc.getContext('2d', { willReadFrequently: true }), W = FD.rc.width, H = FD.rc.height;
   c.fillStyle = '#f4f1e6'; c.fillRect(0, 0, W, H);
   if (o) {
     const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
