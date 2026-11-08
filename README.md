@@ -10,7 +10,7 @@ Try it here: https://daamioo.github.io/unilog2/
 
 ## What's in it
 
-The case has its 12 slots and the modules from the lab: 7400, 7402, 7404, 7410, 7420, 7442, 7450, 7451, 7474, 7476, 7483 and 7486, plus a splitter board. They come on both kinds of boards we had, the cream ones and the grey ones with mirrored pin numbers. Like on the real case, a chip does nothing until its +5V and 0V are cabled to the rail, unconnected inputs float high, and shorting +5V to 0V trips the supply.
+The case has its 12 slots and the modules from the lab: 7400, 7402, 7404, 7410, 7420, 7442, 7450, 7451, 7474, 7476, 7483, 7486, 7495 and 74155, plus a splitter board. They come on both kinds of boards we had, the cream ones and the grey ones with mirrored pin numbers. Like on the real case, a chip does nothing until its +5V and 0V are cabled to the rail, unconnected inputs float high, and shorting +5V to 0V trips the supply.
 
 The rest of the bench is around the case:
 

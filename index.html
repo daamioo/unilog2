@@ -742,7 +742,7 @@ const CHIPS = {
         return [st.a, st.b & 1, st.b >> 1 & 1, st.b >> 2 & 1];
       } }] },
   '7495': { desc: '4-bit shift register, parallel load', group: 'Counters & registers', pins: 14, vcc: 14, gnd: 7, title: '4-BIT\nSHIFT\nREGISTER',
-    names: {1:'SER',2:'A',3:'B',4:'C',5:'D',6:'MODE',8:'CLK2',9:'CLK1',10:'QD',11:'QC',12:'QB',13:'QA'},
+    names: {1:'SER',2:'A',3:'B',4:'C',5:'D',6:'MC',8:'LS/CK2',9:'RS/CK1',10:'QD',11:'QC',12:'QB',13:'QA'},
     build: () => [{ outs: [13,12,11,10], st: { q: [0,0,0,0], p1: 1, p2: 1, ser: 0, par: [0,0,0,0] },
       rand: st => st.q = [rnd(), rnd(), rnd(), rnd()],
       fn(r, st) {
@@ -775,6 +775,13 @@ const CHIPS = {
       const n = r(15) | r(14) << 1 | r(13) << 2 | r(12) << 3;
       return [0,1,2,3,4,5,6,7,8,9].map(i => i === n ? 0 : 1); } }] },
 
+  // 74155 dual 2-to-4 decoder / demultiplexer: A and B are common. Section 1 has an active-high data input (1C) and an
+  // active-low strobe (1G), section 2 has two active-low inputs (2C, 2G), exactly as the gates on the board show.
+  '74155': { desc: 'Dual 2-to-4 decoder / demultiplexer', group: 'Selectors & decoders', pins: 16, vcc: 16, gnd: 8, title: 'DUAL 2 → 4\nDECODER',
+    names: {1:'1C',2:'1~G',3:'B',4:'1Y3',5:'1Y2',6:'1Y1',7:'1Y0',9:'2Y0',10:'2Y1',11:'2Y2',12:'2Y3',13:'A',14:'2~G',15:'2~C'},
+    build: () => [[[7,6,5,4], r => r(1) && !r(2)], [[9,10,11,12], r => !r(15) && !r(14)]].map(([o, en]) => ({ outs: o,
+      fn: r => { const a = r(13) | r(3) << 1, e = en(r); return [0,1,2,3].map(i => e && i === a ? 0 : 1); } })) },
+
   // Splitter board: no chip, just rows of header pins joined on the board, for when one signal has to go to more
   // places than a pin's two headers allow (e.g. one gate output to four inputs). Needs no power.
   'SPLIT': { desc: 'Splitter: 14 rows of 4 linked pins', group: 'Wiring', pins: 14, passive: true, rowPins: 4, title: 'SPLITTER',
@@ -782,15 +789,15 @@ const CHIPS = {
     build: () => [] },
 };
 const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders', 'Wiring'];
-const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153']);
+const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153','74155']);
 // The modules that really exist in the lab, checked against the photos of the case and of the module box.
 // The other chips stay defined so benches saved with them still load, but the rack no longer offers them.
 // The splitter board isn't in the photos, but it is in the lab.
-const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', 'SPLIT'];
+const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', '7495', '74155', 'SPLIT'];
 // Board versions seen in the photos. Cream boards number the pins like the chip (notch up, pin 1 top left).
 // The mirrored gray boards print them mirrored top to bottom: pin 7 (0V) top left, pin 1 bottom left, pin 14 (+5V) bottom right, notch at the bottom.
 const BOARD_VARIANTS = { '7400': ['cream'], '7402': ['cream'], '7404': ['mirrored', 'cream'], '7410': ['mirrored'], '7420': ['cream', 'mirrored'],
-  '7442': ['mirrored'], '7450': ['mirrored'], '7451': ['cream'], '7474': ['cream', 'mirrored'], '7476': ['cream', 'mirrored'], '7483': ['cream'], '7486': ['cream'], 'SPLIT': ['cream'] };
+  '7442': ['mirrored'], '7495': ['mirrored', 'cream'], '74155': ['mirrored'], '7450': ['mirrored'], '7451': ['cream'], '7474': ['cream', 'mirrored'], '7476': ['cream', 'mirrored'], '7483': ['cream'], '7486': ['cream'], 'SPLIT': ['cream'] };
 const defaultVariant = t => (BOARD_VARIANTS[t] || [GRAY_BOARDS.has(t) ? 'gray' : 'cream'])[0];
 const variantOk = (t, v) => !!v && (BOARD_VARIANTS[t] || ['cream', 'gray']).includes(v);
 const VARIANT_NAME = { cream: 'cream board', mirrored: 'gray board (mirrored pin numbers)', gray: 'gray board' };
@@ -1378,6 +1385,85 @@ function gateShape(g, type, cx, cz, w, h, nIn, fx, X, Z, S, fillCol) {
   }
   return { ins, out: { x: xb + (inv ? 2 * br : 0), z: cz } };
 }
+// Boards whose printed diagram isn't built from gates or flip-flop boxes. Drawn from the photos of the real boards, in
+// the board's own orientation (notch at pin 1's end), so pins and labels line up with the real ones.
+const BOARD_PAD = { '7442': 0.45, '7495': 0.5, '74155': 0.45 };
+const BOARD_ART = {};
+function artKit(g, X, Z, S, bg, pin) {
+  const ink = '#1d1d1d';
+  const path = pts => { g.beginPath(); pts.forEach(([x, z], i) => g[i ? 'lineTo' : 'moveTo'](X(x), Z(z))); };
+  const poly = pts => { path(pts); g.stroke(); };
+  const box = (x0, z0, x1, z1) => g.strokeRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
+  const bubble = (x, z) => { g.beginPath(); g.arc(X(x), Z(z), 0.1 * S, 0, 7); g.fillStyle = bg; g.fill(); g.stroke(); };
+  const dot = (x, z) => { g.beginPath(); g.arc(X(x), Z(z), 0.075 * S, 0, 7); g.fillStyle = ink; g.fill(); };
+  const text = (s, x, z, al = 'center', fs = 0.36) => { g.save(); g.font = `700 ${fs * S}px Arial`; g.fillStyle = ink; ctext(g, s, X(x), Z(z), al); g.restore(); };
+  const tri = pts => { path(pts); g.closePath(); g.stroke(); };
+  // AND gate pointing up (output at the top)
+  const andUp = (cx, zApex, w, h) => { const r = w / 2; g.beginPath(); g.moveTo(X(cx - r), Z(zApex + h)); g.lineTo(X(cx - r), Z(zApex + r)); g.arc(X(cx), Z(zApex + r), r * S, Math.PI, 2 * Math.PI); g.lineTo(X(cx + r), Z(zApex + h)); g.closePath(); g.fillStyle = bg; g.fill(); g.stroke(); };
+  return { pin, poly, box, bubble, dot, text, tri, andUp };
+}
+// 7442, gray board: outputs Y1–Y6 on the left, Y8 and Y9 on the right, D C B A below them; Y0 and Y7 are routed round to the bottom and top
+BOARD_ART['7442|mirrored'] = k => {
+  const { poly, box, bubble, text } = k, x0 = -1.74, x1 = 1.74, zt = -4.3, zb = 4.2;
+  box(x0, zt, x1, zb);
+  for (let p = 2; p <= 7; p++) { const z = k.pin(p).z; poly([[-2.3, z], [x0 - 0.2, z]]); bubble(x0 - 0.1, z); text('Y' + (p - 1), x0 + 0.12, z, 'left', 0.4); }
+  for (const p of [10, 11]) { const z = k.pin(p).z; poly([[2.3, z], [x1 + 0.2, z]]); bubble(x1 + 0.1, z); text('Y' + (p - 2), x1 - 0.12, z, 'right', 0.4); }
+  ['D', 'C', 'B', 'A'].forEach((l, i) => { const z = k.pin(12 + i).z; poly([[2.3, z], [x1, z]]); text(l, x1 - 0.12, z, 'right', 0.4); });
+  const z1 = k.pin(1).z, z9 = k.pin(9).z;
+  poly([[-2.3, z1], [0, z1], [0, zb + 0.2]]); bubble(0, zb + 0.1); text('Y0', 0, zb - 0.3, 'center', 0.4);
+  poly([[2.3, z9], [0, z9], [0, zt - 0.2]]); bubble(0, zt - 0.1); text('Y7', 0, zt + 0.3, 'center', 0.4);
+  text('0V', -1.4, k.pin(8).z); text('+5V', 1.4, k.pin(16).z);
+};
+// 7495, gray board: every terminal runs straight to its name; the two clocks are drawn as inverting clock inputs
+BOARD_ART['7495|mirrored'] = k => {
+  const { poly, box, bubble, text, tri } = k, x0 = -1.72, x1 = 1.47, zt = -4.26, zb = 4.18;
+  box(x0, zt, x1, zb);
+  [[2, 'A'], [3, 'B'], [4, 'C'], [5, 'D'], [6, 'MC']].forEach(([p, l]) => { const z = k.pin(p).z; poly([[-2.3, z], [x0, z]]); text(l, x0 + 0.12, z, 'left'); });
+  [[10, 'QD'], [11, 'QC'], [12, 'QB'], [13, 'QA']].forEach(([p, l]) => { const z = k.pin(p).z; poly([[2.3, z], [x1, z]]); text(l, x1 - 0.12, z, 'right'); });
+  const z9 = k.pin(9).z, z8 = k.pin(8).z, z1 = k.pin(1).z;
+  poly([[2.3, z9], [x1 + 0.2, z9]]); bubble(x1 + 0.1, z9); tri([[x1 - 0.32, z9], [x1, z9 - 0.17], [x1, z9 + 0.17]]); text('R SHIFT', x1 - 0.4, z9, 'right', 0.34);
+  poly([[2.3, z8], [0, z8], [0, zt - 0.2]]); bubble(0, zt - 0.1); tri([[0, zt + 0.32], [-0.17, zt], [0.17, zt]]); text('L SHIFT', 0, zt + 0.7, 'center', 0.34);
+  poly([[-2.3, z1], [-1.2, z1], [-1.2, zb]]); text('SERIAL INPUT', 0, zb - 0.35, 'center', 0.34);
+  text('0V', -1.4, k.pin(7).z); text('+5V', 1.4, k.pin(14).z);
+};
+// 7495, cream board: the names are packed along the chip's inner box and each pin reaches its name by a short staircase
+BOARD_ART['7495|cream'] = k => {
+  const { poly, box, text } = k, x0 = -1.7, x1 = 1.45, zt = -4.26, zb = 4.18;
+  box(x0, zt, x1, zb);
+  const L = [[1, 'SER', -3.75, -2.25], [2, 'A', -2.55, -2.2], [3, 'B', -1.85, -2.1], [4, 'C', -1.15, -2.0], [5, 'D', -0.45, -1.9], [6, 'MC', 0.25, -1.8]];
+  for (const [p, l, lz, xk] of L) {
+    const z = k.pin(p).z; poly([[-2.3, z], [xk, z], [xk, lz], [x0, lz]]);
+    if (p === 1) { text('SERIAL', x0 + 0.1, lz - 0.17, 'left', 0.32); text('INPUT', x0 + 0.1, lz + 0.17, 'left', 0.32); } else text(l, x0 + 0.12, lz, 'left');
+  }
+  const R = [[13, 'QA', -3.2, 2.15], [12, 'QB', -2.5, 2.0], [11, 'QC', -1.8, 1.85], [10, 'QD', -1.1, 1.7]];
+  for (const [p, l, lz, xk] of R) { const z = k.pin(p).z; poly([[2.3, z], [xk, z], [xk, lz], [x1, lz]]); text(l, x1 - 0.12, lz, 'right'); }
+  // LS/CK2 (pin 8) and RS/CK1 (pin 9) come in from the right and end at the last two names
+  poly([[2.3, k.pin(8).z], [0.55, k.pin(8).z], [0.55, 1.0], [0.0, 1.0]]); text('LS/CK2', x0 + 0.12, 1.0, 'left');
+  poly([[2.3, k.pin(9).z], [0.3, k.pin(9).z], [0.3, 1.7], [0.0, 1.7]]); text('RS/CK1', x0 + 0.12, 1.7, 'left');
+  text('0V', -1.1, k.pin(7).z); text('+5V', 1.1, k.pin(14).z);
+};
+// 74155, gray board: section 1 (pins 1–7) on the left, section 2 (pins 9–15) on the right. Each has a strobe gate feeding its decoder,
+// A and B are shared. Gate 1 takes 1C and the inverted 1G; gate 2 takes inverted 2C and 2G.
+BOARD_ART['74155|mirrored'] = k => {
+  const { poly, box, bubble, dot, text, andUp } = k;
+  box(-2.0, -3.6, -0.4, 1.0);
+  for (let p = 4; p <= 7; p++) { const z = k.pin(p).z; poly([[-2.3, z], [-2.2, z]]); bubble(-2.1, z); text('Y' + (7 - p), -1.85, z, 'left', 0.38); }
+  text('1', -1.2, -1.0, 'center', 0.55); text('B', -0.55, -1.75, 'right', 0.38); text('A', -0.55, 0.65, 'right', 0.38);
+  box(0.6, -4.95, 2.0, -0.15);
+  for (let p = 9; p <= 12; p++) { const z = k.pin(p).z; poly([[2.3, z], [2.2, z]]); bubble(2.1, z); text('Y' + (p - 9), 1.85, z, 'right', 0.38); }
+  text('2', 1.2, -2.6, 'center', 0.55); text('B', 0.75, -3.05, 'left', 0.38); text('A', 0.75, -0.65, 'left', 0.38);
+  // B: pin 3 up the middle to both decoders
+  poly([[-2.3, k.pin(3).z], [0, k.pin(3).z], [0, -3.05], [0.6, -3.05]]); poly([[-0.4, -1.75], [0, -1.75]]); dot(0, -1.75);
+  // A: pin 13 across to decoder 1, with a branch up to decoder 2
+  poly([[2.3, k.pin(13).z], [-0.4, k.pin(13).z]]); poly([[0.3, k.pin(13).z], [0.3, -0.65], [0.6, -0.65]]); dot(0.3, k.pin(13).z);
+  // strobe gate 1: 1C and inverted 1G
+  andUp(-1.4, 2.35, 0.8, 0.6); bubble(-1.6, 3.05);
+  poly([[-2.3, k.pin(2).z], [-1.6, k.pin(2).z], [-1.6, 3.15]]); poly([[-2.3, k.pin(1).z], [-1.2, k.pin(1).z], [-1.2, 2.95]]); poly([[-1.4, 2.35], [-1.4, 1.0]]);
+  // strobe gate 2: inverted 2C and inverted 2G
+  andUp(1.5, 0.95, 0.8, 0.6); bubble(1.3, 1.65); bubble(1.7, 1.65);
+  poly([[2.3, k.pin(14).z], [1.7, k.pin(14).z], [1.7, 1.75]]); poly([[2.3, k.pin(15).z], [1.3, k.pin(15).z], [1.3, 1.75]]); poly([[1.5, 0.95], [1.5, -0.15]]);
+  text('0V', -1.4, k.pin(8).z); text('+5V', 1.4, k.pin(16).z);
+};
 function boardTexture(type, variant) {
   variant = variant || defaultVariant(type);
   const key = type + '|' + variant;
@@ -1429,7 +1515,7 @@ function boardTexture(type, variant) {
       ctext(g, '0V', X(2.35), Z(def.layout[def.gnd].z), 'right');
     } else {
     const zs = []; for (let p = 1; p <= n; p++) zs.push(PZ(p));
-    const zTop = Math.min(...zs) - 0.85, zBot = Math.max(...zs) + 0.85;
+    const pad = BOARD_PAD[type] || 0.85, zTop = Math.min(...zs) - pad, zBot = Math.max(...zs) + pad;
     // pin pads with their numbers
     g.font = `700 ${0.36 * S}px Arial`; g.fillStyle = '#1d1d1d';
     for (let p = 1; p <= n; p++) {
@@ -1448,7 +1534,9 @@ function boardTexture(type, variant) {
     if (mirrored) g.setLineDash([0.12 * S, 0.1 * S]);
     g.stroke(); g.setLineDash([]);
     g.lineWidth = 0.05 * S;
-    if (def.gates) {
+    const art = BOARD_ART[type + '|' + variant];
+    if (art) art(artKit(g, X, Z, S, bg, p => pinGeo(def, variant, p)));
+    else if (def.gates) {
       def.gates.forEach((gt, gi) => {
         const pins = [...gt.i, gt.o];
         const L = pins.filter(p => p <= half).length;
@@ -1500,7 +1588,7 @@ function boardTexture(type, variant) {
           const pg = pinGeo(def, variant, p), tz = bz0 + 0.3 + k * ((bh - 0.6) / Math.max(1, list.length - 1));
           const ex = pg.side * 2.3, bx = boxSide < 0 ? bx0 : bx1, xc = (ex + bx) / 2 + pg.side * 0.08 * k;
           g.beginPath(); g.moveTo(X(ex), Z(pg.z)); g.lineTo(X(xc), Z(pg.z)); g.lineTo(X(xc), Z(tz)); g.lineTo(X(bx), Z(tz)); g.stroke();
-          ctext(g, lab, X(boxSide < 0 ? bx0 + 0.1 : bx1 - 0.1), Z(tz), boxSide < 0 ? 'left' : 'right');
+          ctext(g, lab === 'C' && gray && type === '7476' ? 'T' : lab === 'C' && type === '7474' && !gray ? 'CK' : lab, X(boxSide < 0 ? bx0 + 0.1 : bx1 - 0.1), Z(tz), boxSide < 0 ? 'left' : 'right');
         });
         term(left, -1); term(right, 1);
         g.save(); g.font = `700 ${0.3 * S}px Arial`; ctext(g, String(fi + 1), X(cx), Z(bz0 + bh / 2)); g.restore();
@@ -1525,6 +1613,7 @@ function boardTexture(type, variant) {
     }
     g.fillStyle = '#151515'; g.font = `700 ${0.72 * S}px Arial`; g.textBaseline = 'middle';
     if (!def.passive) ctext(g, type, X(3.0), Z(-5.95));
+    if (!def.passive && gray) { g.font = `700 ${0.34 * S}px Arial`; ctext(g, 'ZANiD', X(-3.3), Z(5.95)); }
     else if (gray) { g.font = `600 ${0.3 * S}px Arial`; ctext(g, 'UNILOG', X(-3.4), Z(5.95)); }
   });
   boardTexCache[key] = tex; return tex;
