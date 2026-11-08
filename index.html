@@ -72,6 +72,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 .g-step{display:flex;align-items:center;gap:10px;margin:6px 0 4px;font-size:15px;flex-wrap:wrap}
 .g-step .end{display:flex;flex-direction:column;line-height:1.25}
 .g-step .end small{color:var(--muted);font-size:12px}
+.g-step .code{margin-left:auto;font:700 17px var(--f-mono);color:var(--accent);letter-spacing:.02em}
 .g-step .arr{color:var(--accent);font-size:18px}
 .g-step .sw{width:12px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);flex:none}
 .g-step .meta{width:100%;color:var(--muted);font-size:12px}
@@ -331,6 +332,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 #printView .tt .sep{border-left:1.4pt solid #000}
 #printView .diagram{border:.5pt solid #999;padding:3pt;break-inside:avoid}
 #printView .diagram svg{width:100%;height:auto;max-height:95mm;display:block}
+#printView .wl .code{font:700 8pt var(--f-mono,monospace);white-space:nowrap}
 #printView .wl .sigc{font-weight:600;font-size:7.5pt;background:#fafafa;max-width:70pt}
 #printView .diagram .lv-body{fill:#fff;stroke:#000;stroke-width:1.4}
 #printView .diagram .lv-line,#printView .diagram .lv-w{stroke:#000;fill:none;stroke-width:1.4;stroke-dasharray:none;animation:none}
@@ -449,7 +451,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
       <li>Drag a board from the module rack (on the table left of the case) onto a slot, or click it to drop it in the first free slot. On an empty slot it goes in. On a module with no cables it replaces that module. A module with cables on it stays put: unplug them first.</li>
       <li>Drag a module that's already in the case to move it. Dropping it on another module swaps the two, and the cables go with them. Drop it outside the case to put it back on the rack.</li>
       <li>Click a module to open its datasheet in this manual (the <b>Datasheets</b> tab): the pinout, whether it is powered, which slots hold that chip, and buttons to wire its power, turn it, swap its board or return it to the rack. <kbd>R</kbd> turns it 180°. The row of chip numbers at the top of the tab looks up any other chip.</li>
-      <li>The <b>splitter</b> board (at the end of the rack) has 14 rows of 4 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
+      <li>The <b>splitter</b> board (at the end of the rack) has 7 rows of 6 pins, and every row is one point. Use it when a signal must reach more places than a pin's two headers allow, for example one gate output feeding four LEDs. The design builder uses it for that too.</li>
     </ul>
     <h3>Panel</h3>
     <ul>
@@ -784,15 +786,15 @@ const CHIPS = {
 
   // Splitter board: no chip, just rows of header pins joined on the board, for when one signal has to go to more
   // places than a pin's two headers allow (e.g. one gate output to four inputs). Needs no power.
-  'SPLIT': { desc: 'Splitter: 14 rows of 4 linked pins', group: 'Wiring', pins: 14, passive: true, rowPins: 4, title: 'SPLITTER',
-    names: {1:'A',2:'B',3:'C',4:'D',5:'E',6:'F',7:'G',8:'H',9:'I',10:'J',11:'K',12:'L',13:'M',14:'N'},
+  'SPLIT': { desc: 'Splitter: 7 rows of 6 linked pins', group: 'Wiring', pins: 7, passive: true, rowPins: 6, title: 'SPLITTER',
+    names: {1:'A',2:'B',3:'C',4:'D',5:'E',6:'F',7:'G'},
     build: () => [] },
 };
 const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders', 'Wiring'];
 const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153','74155']);
 // The modules that really exist in the lab, checked against the photos of the case and of the module box.
 // The other chips stay defined so benches saved with them still load, but the rack no longer offers them.
-// The splitter board isn't in the photos, but it is in the lab.
+// The splitter is the plain cream board with 7 lines of 6 pins, seen between the 7410 and the 7402 in the photos of the case.
 const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', '7495', '74155', 'SPLIT'];
 // Board versions seen in the photos. Cream boards number the pins like the chip (notch up, pin 1 top left).
 // The mirrored gray boards print them mirrored top to bottom: pin 7 (0V) top left, pin 1 bottom left, pin 14 (+5V) bottom right, notch at the bottom.
@@ -809,9 +811,9 @@ CHIPS['7483'].layout = (() => {
   L[5] = { side: -1, z: 5.3 }; L[12] = { side: 1, z: 5.3 };                                       // +5V, 0V
   return L;
 })();
-// splitter rows: A–G down the left, H–N down the right, at the same spacing as a 14-pin board
-CHIPS.SPLIT.layout = (() => { const L = {}; for (let p = 1; p <= 14; p++) { const g = pinLocal(14, p); L[p] = { side: g.side, z: g.z }; } return L; })();
-CHIPS.SPLIT.rowX = [1.95, 2.5, 3.05, 3.6];   // header x positions in a row, distance from the board's centre line
+// splitter rows: A–G from the top (back) of the board to the bottom, six pins across each row, as on the real board (no printing on it)
+CHIPS.SPLIT.layout = (() => { const L = {}; for (let p = 1; p <= 7; p++) L[p] = { side: 1, z: (p - 4) * 1.38 }; return L; })();
+CHIPS.SPLIT.rowX = [-3.5, -2.1, -0.7, 0.7, 2.1, 3.5];   // header x positions in a row, from the board's centre line
 CHIPS['7483'].names = Object.assign(CHIPS['7483'].names, { 2: 'Σ3', 6: 'Σ2', 9: 'Σ1', 15: 'Σ4' });
 // flip-flops are drawn on the boards as small boxes; terminals listed in the order they are drawn
 CHIPS['7474'].ffs = [{ ins: [[2, 'D'], [3, 'C'], [4, '~S'], [1, '~R']], outs: [[5, 'Q'], [6, '~Q']] },
@@ -1483,18 +1485,12 @@ function boardTexture(type, variant) {
     g.strokeStyle = '#1d1d1d'; g.lineWidth = 0.065 * S; g.lineJoin = 'round';
     g.textBaseline = 'middle';
     if (def.passive) {
-      // splitter: each row's pads sit on one copper strip, so every header in a row is the same point
+      // splitter: one line through each row of pins, so every header in a row is the same point. The real board has no printing.
+      g.lineWidth = 0.05 * S;
       for (let p = 1; p <= n; p++) {
-        const { side, z } = pinGeo(def, variant, p), xs = def.rowX;
-        const xa = side * (xs[0] - 0.42), xb = side * (xs[xs.length - 1] + 0.42);
-        g.fillStyle = 'rgba(190,150,60,.55)'; g.fillRect(X(Math.min(xa, xb)), Z(z - 0.2), Math.abs(xb - xa) * S, 0.4 * S);
-        g.lineWidth = 0.045 * S; g.strokeRect(X(Math.min(xa, xb)), Z(z - 0.36), Math.abs(xb - xa) * S, 0.72 * S);
-        g.fillStyle = '#1d1d1d'; g.font = `700 ${0.36 * S}px Arial`; ctext(g, def.names[p], X(side * 1.3), Z(z));
+        const z = pinGeo(def, variant, p).z, xs = def.rowX;
+        g.beginPath(); g.moveTo(X(xs[0]), Z(z)); g.lineTo(X(xs[xs.length - 1]), Z(z)); g.stroke();
       }
-      g.save(); g.translate(X(0), Z(0)); g.rotate(-Math.PI / 2);
-      g.font = `700 ${0.46 * S}px Arial`; g.textAlign = 'center'; g.fillStyle = '#1d1d1d'; g.fillText('SPLITTER', 0, 0);
-      g.font = `600 ${0.3 * S}px Arial`; g.fillText('each row is one point', 0, 0.55 * S);
-      g.restore();
     } else if (def.layout) {
       // function-grouped board (7483): no pin numbers, each header pair runs to its name on the chip outline
       const bx0 = -1.55, bx1 = 1.55, bz0 = -4.3, bz1 = 3.6;
@@ -2307,7 +2303,7 @@ function headerTip(h) {
   if (h.mod) {
     const d = h.mod.def, role = pinRole(d, h.pinNo);
     title = d.layout ? `${h.mod.type} · ${pinHTML(d.names[h.pinNo])}` : `${h.mod.type} · pin ${h.pinNo} · ${pinHTML(d.names[h.pinNo])}`;
-    sub = { in: 'input', out: 'output', pwr: S.autoPower ? 'power (shortcut: powered without a cable)' : 'power: cable it to the rail', nc: 'not connected inside the chip', jn: 'splitter row: all 4 pins are joined' }[role];
+    sub = { in: 'input', out: 'output', pwr: S.autoPower ? 'power (shortcut: powered without a cable)' : 'power: cable it to the rail', nc: 'not connected inside the chip', jn: 'splitter row: all 6 pins are joined' }[role];
     if (role !== 'jn' && !h.mod.powered && powerOn) sub += ' · module NOT powered';
   } else { title = pinHTML(h.term.label); sub = { out: 'source', pwr: 'supply rail', in: 'input' }[h.term.role] || ''; }
   const extra = h.wire ? 'Drag the cable end to move it' : wiring ? 'Click to plug the cable here' : 'Click to start a cable';
@@ -3870,7 +3866,7 @@ function dzBuild(skipOpt, noSplit) {
   if (splitSigs.size && !splitM) { const s = freeSlots[newInst.length], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } splitM = createModule('SPLIT', s, 0); splitNew = true; }
   if (splitM) rebuild();
   let splitRow = 1;
-  if (splitM) while (splitRow <= 14 && splitM.pt[splitRow].net.terms.length > 1) splitRow++;   // rows already in use stay as they are
+  if (splitM) while (splitRow <= 7 && splitM.pt[splitRow].net.terms.length > 1) splitRow++;   // rows already in use stay as they are
   // gates into chips, keeping connected gates together
   for (const p of conc) {
     const c = chipOfP(p), per = CHIPS[c].gates.length, mine = new Set([...p.ins.filter(Boolean), p.out]);
@@ -3922,7 +3918,7 @@ function dzBuild(skipOpt, noSplit) {
       // rows needed so the tree has enough headers: every cable uses one header at each end
       const caps = nodes.reduce((a, t) => a + freeH(t).length, 0);
       let rows = Math.max(1, Math.ceil((2 * (nodes.length - 1) - caps) / 2));
-      while (rows > 0 && splitRow <= 14) { nodes.push(splitM.pt[splitRow++].id); rows--; }
+      while (rows > 0 && splitRow <= 7) { nodes.push(splitM.pt[splitRow++].id); rows--; }
       if (rows > 0) warns.push('The splitter has no free row left for one of the signals.');
       const byTerm = headersByTerm(), n0 = wires.length;
       const bad = layTree(nodes.map(t => T.get(t)), T.get(e.drv), byTerm, color);
@@ -4945,28 +4941,31 @@ let benchTitle = '';
 const COLOR_NAMES = new Map(WIRE_COLORS.map(([n, c]) => [c, n]));
 const hexCol = c => '#' + c.toString(16).padStart(6, '0');
 const slotTag = s => 'M' + (s + 1);
+// the numbers used for reading a cable out loud: front (bottom) row 1–6, back (top) row 11–16, each from the left
+const labNo = s => s >= 6 ? s - 5 : s + 11;
+const codeOf = (a, b) => `${a || '?'}/${b || '?'}`;
 // one end of a cable, as you'd say it in the lab: place (module or panel part) + pin
 function endText(h) {
   if (h.mod) {
     const m = h.mod, nm = m.def.names[h.pinNo];
     // boards labelled by function (7483) have no pin numbers, so the sheet names the header instead
-    if (m.def.passive) return { place: `<b>${slotTag(m.slot)}</b> splitter`, pin: `row <b class="mono">${nm}</b>`, key: [2, m.slot, h.pinNo] };
-    if (m.def.layout) return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b class="mono">${pinHTML(nm === 'VCC' ? '+5V' : nm === 'GND' ? '0V' : nm)}</b>`, key: [2, m.slot, h.pinNo] };
-    return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b>${h.pinNo}</b>${nm && nm !== 'NC' ? ' <span class="mono">' + pinHTML(nm) + '</span>' : ''}`, key: [2, m.slot, h.pinNo] };
+    if (m.def.passive) return { place: `<b>${slotTag(m.slot)}</b> splitter`, pin: `row <b class="mono">${nm}</b>`, code: `${labNo(m.slot)}/${nm}`, key: [2, m.slot, h.pinNo] };
+    if (m.def.layout) return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b class="mono">${pinHTML(nm === 'VCC' ? '+5V' : nm === 'GND' ? '0V' : nm)}</b>`, code: `${labNo(m.slot)}/${nm === 'VCC' ? '+5V' : nm === 'GND' ? '0V' : nm.replace('~', '')}`, key: [2, m.slot, h.pinNo] };
+    return { place: `<b>${slotTag(m.slot)}</b> ${m.type}`, pin: `<b>${h.pinNo}</b>${nm && nm !== 'NC' ? ' <span class="mono">' + pinHTML(nm) + '</span>' : ''}`, code: `${labNo(m.slot)}/${h.pinNo}`, key: [2, m.slot, h.pinNo] };
   }
   const id = h.term.id; let r;
   if ((r = /^R(\d)\.(GND|VCC|H)\./.exec(h.id))) {
     const g = +r[1];
-    return { place: `<b>${{ GND: '0V', VCC: '+5V', H: 'H' }[r[2]]}</b> rail`, pin: `between M${g + 1} and M${g + 7}`, key: [0, g, 0] };
+    return { place: `<b>${{ GND: '0V', VCC: '+5V', H: 'H' }[r[2]]}</b> rail`, pin: `between M${g + 1} and M${g + 7}`, code: `${{ GND: '0V', VCC: '+5V', H: 'H' }[r[2]]}(${labNo(g + 6)}-${labNo(g)})`, key: [0, g, 0] };
   }
-  if ((r = /^SW(\d)(Q|N)$/.exec(id))) return { place: `<b>Switch ${r[1]}</b>`, pin: r[2] === 'Q' ? 'Q' : '<span class="ov">Q</span>', key: [1, +r[1], 0] };
-  if ((r = /^LED(\d+)$/.exec(id))) return { place: `<b>LED ${r[1]}</b>`, pin: 'display register', key: [3, +r[1], 0] };
-  if (id === 'CLK' || id === 'CLKN') return { place: '<b>Clock</b>', pin: id === 'CLK' ? '⊓ output' : '⊔ output', key: [1, 20, 0] };
-  if ((r = /^P(\d)(N?)$/.exec(id))) return { place: `<b>Pulse ${r[1]}</b>`, pin: r[2] ? '⊔ output' : '⊓ output', key: [1, 10 + +r[1], 0] };
-  if ((r = /^BCD(\d)$/.exec(id))) return { place: '<b>Display</b>', pin: `2<sup>${r[1]}</sup> input`, key: [3, 30 + +r[1], 0] };
-  if ((r = /^SEG(\w+)$/.exec(id))) return { place: '<b>Display</b>', pin: `segment ${r[1] === 'dp' ? 'DP' : r[1]}`, key: [3, 40, 0] };
-  if (id === 'SCA' || id === 'SCB') return { place: '<b>Oscilloscope</b>', pin: id === 'SCA' ? 'A' : 'B', key: [3, 50, 0] };
-  return { place: esc(h.term.label), pin: '', key: [4, 0, 0] };
+  if ((r = /^SW(\d)(Q|N)$/.exec(id))) return { place: `<b>Switch ${r[1]}</b>`, pin: r[2] === 'Q' ? 'Q' : '<span class="ov">Q</span>', code: `SW${r[1]}${r[2] === 'Q' ? '' : '-'}`, key: [1, +r[1], 0] };
+  if ((r = /^LED(\d+)$/.exec(id))) return { place: `<b>LED ${r[1]}</b>`, pin: 'display register', code: `LED${r[1]}`, key: [3, +r[1], 0] };
+  if (id === 'CLK' || id === 'CLKN') return { place: '<b>Clock</b>', pin: id === 'CLK' ? '⊓ output' : '⊔ output', code: id === 'CLK' ? 'CLK' : 'CLK-', key: [1, 20, 0] };
+  if ((r = /^P(\d)(N?)$/.exec(id))) return { place: `<b>Pulse ${r[1]}</b>`, pin: r[2] ? '⊔ output' : '⊓ output', code: `P${r[1]}${r[2] ? '-' : ''}`, key: [1, 10 + +r[1], 0] };
+  if ((r = /^BCD(\d)$/.exec(id))) return { place: '<b>Display</b>', pin: `2<sup>${r[1]}</sup> input`, code: `D${r[1]}`, key: [3, 30 + +r[1], 0] };
+  if ((r = /^SEG(\w+)$/.exec(id))) return { place: '<b>Display</b>', pin: `segment ${r[1] === 'dp' ? 'DP' : r[1]}`, code: `SEG${r[1] === 'dp' ? 'DP' : r[1]}`, key: [3, 40, 0] };
+  if (id === 'SCA' || id === 'SCB') return { place: '<b>Oscilloscope</b>', pin: id === 'SCA' ? 'A' : 'B', code: id === 'SCA' ? 'SCA' : 'SCB', key: [3, 50, 0] };
+  return { place: esc(h.term.label), pin: '', code: esc(h.term.label), key: [4, 0, 0] };
 }
 // signal names from the gate design, when the bench was built from it
 function designNames() {
@@ -5077,8 +5076,8 @@ function buildPrintSheet(o) {
   if (o.case) {
     const cell = s => {
       const m = moduleAt(s);
-      if (!m) return `<td class="unused">${slotTag(s)}<br>empty</td>`;
-      return `<td class="${used.has(m) ? '' : 'unused'}"><b>${slotTag(s)}</b> ${m.type}<br>${used.has(m) ? (m.rot ? 'turned 180°' : 'notch away') : 'not used'}</td>`;
+      if (!m) return `<td class="unused">${slotTag(s)} · <b>#${labNo(s)}</b><br>empty</td>`;
+      return `<td class="${used.has(m) ? '' : 'unused'}"><b>${slotTag(s)}</b> · <b>#${labNo(s)}</b> ${m.type}<br>${used.has(m) ? (m.rot ? 'turned 180°' : 'notch away') : 'not used'}</td>`;
     };
     left.push(`<h2>1 · Modules in the case</h2>
       <table class="case"><tr>${[0, 1, 2, 3, 4, 5].map(cell).join('')}</tr><tr class="rail"><td colspan="6">rail: 0V · H · +5V for each column</td></tr><tr>${[6, 7, 8, 9, 10, 11].map(cell).join('')}</tr></table>
@@ -5112,17 +5111,17 @@ function buildPrintSheet(o) {
     const steps = cableSteps(), best = steps.some(st => st.layer != null);
     const catName = ['Constants (0V / H / +5V rails)', 'Inputs (switches, pulses, clock)', 'Signals from the chips', 'Other'];
     const layerName = ['Power', 'Short cables', 'Medium cables', 'Long cables (in last: they arch over the others)'];
-    let h = `<h2>4 · Wiring list</h2><p>Top to bottom, tick each cable${best ? ': power first, then short cables before long ones, each starting near where the last one ended' : ', signal by signal'}. The numbers match Wire it. M7 = module in slot 7. Each chip pin has two header pins: either free one will do. cm = rough cable length.</p>
-      <table class="wl"><thead><tr><th class="num">#</th><th class="tick">✓</th><th>Signal</th><th>From</th><th>Pin</th><th>Cable</th><th>To</th><th>Pin</th><th class="num">cm</th></tr></thead><tbody>`;
+    let h = `<h2>4 · Wiring list</h2><p>Top to bottom, tick each cable${best ? ': power first, then short cables before long ones, each starting near where the last one ended' : ', signal by signal'}. The numbers match Wire it. Code = module / pin / module / pin, so 1/4/4/1 is module 1 pin 4 to module 4 pin 1 (front row 1–6, back row 11–16, each from the left; M7 = slot 7, the list below says which code is which). SW = switch, LED = LED, a trailing - = the inverted output. Each chip pin has two header pins: either free one will do. cm = rough cable length.</p>
+      <table class="wl"><thead><tr><th class="num">#</th><th class="tick">✓</th><th>Signal</th><th>Code</th><th>From</th><th>Pin</th><th>Cable</th><th>To</th><th>Pin</th><th class="num">cm</th></tr></thead><tbody>`;
     let grp = null;
     steps.forEach((r, i) => {
       const g = best ? layerName[r.layer] : catName[r.cat] || '';
-      if (g !== grp) { grp = g; if (g) h += `<tr class="pgrp"><td colspan="9">${g}</td></tr>`; }
+      if (g !== grp) { grp = g; if (g) h += `<tr class="pgrp"><td colspan="10">${g}</td></tr>`; }
       // a signal's name once for a run of its cables in a row
       const first = i === 0 || steps[i - 1].label !== r.label || (best ? steps[i - 1].layer !== r.layer : steps[i - 1].cat !== r.cat);
       let span = 1; while (first && i + span < steps.length && steps[i + span].label === r.label && (best ? steps[i + span].layer === r.layer : steps[i + span].cat === r.cat)) span++;
       const cn = COLOR_NAMES.get(r.color) || hexCol(r.color);
-      h += `<tr><td class="num">${i + 1}</td><td class="tick">☐</td>${first ? `<td class="sigc" rowspan="${span}">${r.label}</td>` : ''}<td>${r.from.place}</td><td>${r.from.pin}</td><td><span class="sw" style="background:${hexCol(r.color)}"></span>${esc(cn)}</td><td>${r.to.place}</td><td>${r.to.pin}</td><td class="num">${r.len ? Math.ceil(r.len) : ''}</td></tr>`;
+      h += `<tr><td class="num">${i + 1}</td><td class="tick">☐</td>${first ? `<td class="sigc" rowspan="${span}">${r.label}</td>` : ''}<td class="code">${esc(codeOf(r.from.code, r.to.code))}</td><td>${r.from.place}</td><td>${r.from.pin}</td><td><span class="sw" style="background:${hexCol(r.color)}"></span>${esc(cn)}</td><td>${r.to.place}</td><td>${r.to.pin}</td><td class="num">${r.len ? Math.ceil(r.len) : ''}</td></tr>`;
     });
     h += '</tbody></table>';
     right.push(h);
@@ -5379,7 +5378,7 @@ function dsShow(type) {
   const slots = modules.filter(x => x.type === type).sort((a, b) => a.slot - b.slot).map(x => `slot ${x.slot + 1}`);
   const vs = BOARD_VARIANTS[type] || [];
   let h = `<h2>${type === 'SPLIT' ? 'Splitter' : type}</h2><p class="sub">${d.desc} · ${d.pins} ${d.passive ? 'headers' : 'pins'} · boards: ${vs.map(v => VARIANT_NAME[v] || v).join(', ') || 'one'}</p>${pins}`;
-  h += `<p>${d.passive ? 'Every row is one point: the four headers of a row are joined on the board. Use it to send one signal to more places than the two headers of a chip pin allow. It needs no power.'
+  h += `<p>${d.passive ? 'Every row is one point: the six headers of a row are joined on the board (rows A–G from the top of the board). Use it to send one signal to more places than the two headers of a chip pin allow. It needs no power.'
     : `Outputs in red. Power: pin ${d.vcc} to +5V, pin ${d.gnd} to 0V. Inputs that aren't wired float HIGH.`}${d.layout ? ' This board has no pin numbers: its headers are labelled by function.' : ''}</p>`;
   h += `<p>${slots.length ? 'In the case: ' + slots.join(', ') + '.' : 'Not in the case: drag it from the rack.'}</p>`;
   if (m) {
@@ -5777,14 +5776,14 @@ function guideStop(said) {
 }
 function guideSave() {
   try {
-    if (GUIDE) localStorage.setItem('unilog2.guide.v1', JSON.stringify({ steps: GUIDE.steps, sig: GUIDE.sig, follow: $('#gFollow').checked }));
-    else localStorage.removeItem('unilog2.guide.v1');
+    if (GUIDE) localStorage.setItem('unilog2.guide.v2', JSON.stringify({ steps: GUIDE.steps, sig: GUIDE.sig, follow: $('#gFollow').checked }));
+    else localStorage.removeItem('unilog2.guide.v2');
   } catch (_) {}
 }
 // after a reload the guide carries on, if the case still holds the same modules
 function guideResume() {
-  let g = null; try { g = JSON.parse(localStorage.getItem('unilog2.guide.v1') || 'null'); } catch (_) {}
-  if (!g || !Array.isArray(g.steps) || g.sig !== modSig()) { try { localStorage.removeItem('unilog2.guide.v1'); } catch (_) {} return; }
+  let g = null; try { g = JSON.parse(localStorage.getItem('unilog2.guide.v2') || 'null'); } catch (_) {}
+  if (!g || !Array.isArray(g.steps) || g.sig !== modSig()) { try { localStorage.removeItem('unilog2.guide.v2'); } catch (_) {} return; }
   GUIDE = { steps: g.steps, sig: g.sig, cur: 0, ver: -1, done: [], extra: [], msg: '' };
   $('#gFollow').checked = !!g.follow;
   $('#guide').hidden = false; $('#bGuide').setAttribute('aria-pressed', 'true'); G3.group.visible = true; uiOpened('guide');
@@ -5868,6 +5867,7 @@ function guideShow() {
   if (st) {
     $('#gGroup').innerHTML = st.label;
     $('#gStep').innerHTML = `<span class="sw" style="background:${hexCol(st.color)}"></span>${endH(st.from)}<span class="arr">→</span>${endH(st.to)}`
+      + `<span class="code" title="module / pin / module / pin. Front row 1–6, back row 11–16, each from the left">${esc(codeOf(st.from.code, st.to.code))}</span>`
       + `<span class="meta">${esc(COLOR_NAMES.get(st.color) || 'cable')}${st.len ? ` · about ${Math.ceil(st.len)} cm` : ''}${nDone > G.cur ? ` · ${nDone - G.cur} later cable${nDone - G.cur === 1 ? ' is' : 's are'} already in` : ''}</span>`;
   } else {
     $('#gGroup').textContent = 'Done';
