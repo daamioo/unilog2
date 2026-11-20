@@ -249,6 +249,31 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 .tt-expr{padding:8px 12px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12.5px;line-height:1.7;max-height:24%;overflow:auto;color:#d6d3ca}
 .tt-expr .nt{color:var(--muted);font-family:var(--f-body)}
 #ttMsg{font-size:12.5px;color:var(--muted);flex-basis:100%}
+#ttBox .hp-tabs .segm{margin-right:auto}
+#fsmSvg{flex:1;min-height:0;width:100%;display:block;background:var(--lv-bg);touch-action:none;user-select:none}
+.fsm-st .body{fill:var(--lv-body);stroke:var(--lv-ink);stroke-width:1.8;cursor:move}
+.fsm-st .ring{fill:none;stroke:transparent;stroke-width:10;cursor:crosshair;pointer-events:stroke}
+.fsm-st .ring:hover{stroke:rgba(230,170,60,.45)}
+.fsm-st.sel .body{stroke:var(--accent);stroke-width:2.8}
+.fsm-st.cur .body{fill:rgba(255,77,61,.22);stroke:var(--hi);stroke-width:2.8}
+.fsm-st text{fill:var(--lv-ink);font:600 13px var(--f-mono);text-anchor:middle;pointer-events:none}
+.fsm-st text.o{font:600 11px var(--f-mono);fill:var(--hi)}
+.fsm-ed .l,.fsm-init{fill:none;stroke:var(--lv-ink);stroke-width:1.6}
+.fsm-ed .hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}
+.fsm-ed.sel .l{stroke:var(--accent);stroke-width:2.6}
+.fsm-ed text{fill:var(--lv-ink);font:500 11px var(--f-mono);text-anchor:middle;paint-order:stroke;stroke:var(--lv-bg-solid,#111417);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.paper .fsm-ed text{stroke:#efebe0}
+.fsm-head{fill:var(--lv-ink)}
+.fsm-temp{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:6 4;pointer-events:none}
+.fsm-tab{border-collapse:collapse;margin:4px 0 6px}
+.fsm-tab th,.fsm-tab td{padding:1px 9px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.fsm-tab th{color:var(--muted);font-weight:500}
+#fsmMsg{font-size:12.5px;color:var(--muted);flex-basis:100%}
+#fsmMsg.bad{color:#ffb4a8}
+.paper #fsmMsg.bad{color:#b02a1f}
+#fsmSel label{display:inline-flex;gap:4px;align-items:center}
+#fsmSel select{padding:2px 4px;font-family:var(--f-mono);font-size:12px}
+#fsmSel input[type=text]{font-family:var(--f-mono)}
 #ttMsg.bad{color:#ffb4a8}
 #lvSvg{flex:1;min-height:0;width:100%;display:block;background:var(--lv-bg);touch-action:none;user-select:none}
 .lv-foot{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
@@ -378,6 +403,8 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
       <button data-add="sw">Switch</button><button data-add="pulse">Pulse</button><button data-add="clk">Clock</button><button data-add="one">1</button><button data-add="zero">0</button>
       <span class="lbl">Gates</span>
       <button data-add="and">AND</button><button data-add="or">OR</button><button data-add="nand">NAND</button><button data-add="nor">NOR</button><button data-add="xor">XOR</button><button data-add="xnor">XNOR</button><button data-add="not">NOT</button>
+      <span class="lbl">Memory</span>
+      <button data-add="dff" title="D flip-flop (half a 7474): takes D on the rising edge of C; R (active low) clears it">D flip-flop</button>
       <span class="lbl">Out</span>
       <button data-add="led">LED</button><button data-add="hex">Hex display</button>
     </div>
@@ -404,7 +431,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
   <header class="ph"><b class="ph-t">UNILOG-2 circuit</b><span class="ph-k">Truth table</span><span class="ph-d"></span></header>
   <p id="ttAway" class="away" hidden>The truth table is open on the screen.<br><button id="ttBackSheet">Put it back on the sheet</button></p>
   <div id="ttBox">
-  <nav class="hp-tabs"><button id="ttPop" title="Open the truth table in a panel on the screen (T)">Open on the screen ⧉</button></nav>
+  <nav class="hp-tabs"><span class="segm"><button id="ttTabTT" aria-pressed="true">Truth table</button><button id="ttTabFsm" aria-pressed="false" title="Draw a Moore or Mealy state machine and get its circuit">State machine</button></span><button id="ttPop" title="Open the truth table in a panel on the screen (T)">Open on the screen ⧉</button></nav>
   <div id="ttPane" class="pane">
     <div class="dz-bar">
       <span class="lbl">Fill from</span>
@@ -429,6 +456,32 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
       <label><input type="checkbox" id="ttBuild"> and build it on the bench</label>
       <button id="ttCopy">Copy table</button>
       <span id="ttMsg"></span>
+    </div>
+  </div>
+  <div id="fsmPane" class="pane" hidden>
+    <div class="dz-bar">
+      <label>Type <select id="fsmType"><option value="moore">Moore (output in the state)</option><option value="mealy">Mealy (output on the arrow)</option></select></label>
+      <label>Inputs <select id="fsmNIn"><option>1</option><option>2</option><option>3</option></select></label>
+      <label>Outputs <select id="fsmNOut"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+      <button id="fsmAdd">Add state</button><button id="fsmEx">Example</button><button id="fsmClear">Clear</button><button id="fsmFit">Fit</button>
+    </div>
+    <div class="dz-bar dz-sel" id="fsmSel"></div>
+    <div class="stage">
+      <svg id="fsmSvg" xmlns="http://www.w3.org/2000/svg"><defs><marker id="fsmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="fsm-head"/></marker></defs><g id="fsmRoot"></g></svg>
+      <p id="fsmEmpty" class="lv-emptyish" style="position:absolute;inset:70px 24px auto;text-align:center;color:var(--muted);line-height:1.5;pointer-events:none">Draw a state machine: double-click to add states, drag from a state's rim to draw arrows. Or press <b>Example</b>.</p>
+    </div>
+    <div id="fsmInfo" class="tt-expr"></div>
+    <div class="dz-foot">
+      <label>Style <select id="fsmStyle">
+        <option value="smart" selected>Smart (XOR tricks, shared logic)</option>
+        <option value="nand">NAND–NAND</option>
+        <option value="nor">NOR–NOR</option>
+        <option value="sop">AND–OR</option>
+        <option value="pos">OR–AND</option>
+      </select></label>
+      <button id="fsmMake" class="primary">Create circuit</button>
+      <label><input type="checkbox" id="fsmBuild"> and build it on the bench</label>
+      <span id="fsmMsg"></span>
     </div>
   </div>
   </div>
@@ -477,6 +530,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
     <h3>Truth tables</h3>
     <ul>
       <li>The truth table lives on its sheet in the lid; <b>Open on the screen</b> (or <b>Truth table</b> on the top bar, or <kbd>T</kbd>) moves it into the same panel as the logic view, with a tab for each. It measures a hand-wired bench by itself whenever the wiring changes, except for circuits with memory, where stepping the switches would change what a latch or counter holds. <b>Design</b> and <b>Bench</b> fill it on demand: from your design (ideal gates), or by measuring the bench: it steps through every combination of the wired switches and pulses, reads the LEDs, then puts the switches back. Circuits with memory are evaluated top to bottom, so each row follows on from the one above.</li>
+      <li><b>State machine</b> (the second tab on the truth table sheet): draw a Moore or Mealy automaton. Double-click to add a state, drag from a state's rim to another state (or back to itself) to draw an arrow, and click a state or an arrow to set the input letters, outputs and next states. Inputs x are switches 1–3, outputs y are LEDs 1–4; anything left out is a don't-care. Below the drawing you see the reduced state table (unreachable states left out, equivalent states merged), the state codes and the equations. <b>Create circuit</b> makes a design with D flip-flops (7474) and gates: pulse 1 is the clock, pulse 2 resets to the initial state (code 0…0). Once it is built, the state the bench is in lights up in the drawing.</li>
       <li>Click an output cell to cycle it through 0, 1 and X (don't care). The minimised expression for each output updates as you edit (Quine–McCluskey).</li>
       <li><b>Create design</b> turns the table into gates and opens it in the designer. Tick <b>and build it on the bench</b> to go straight from a truth table to modules and cables.</li>
       <li>The <b>Smart</b> style designs the way a person at the bench does. It spots XOR patterns (parity, Gray code) and chains them, reuses outputs and signals it has already built (one output can be a single gate fed by two earlier ones), and tries short tricks of up to three gates. Otherwise it falls back to minimised NAND–NAND or NOR–NOR. It designs for the chips in your case: the lab has no AND or OR chips, so an AND or OR counts as the two gates it really costs. The four classic styles give the plain textbook forms.</li>
@@ -3439,13 +3493,14 @@ function dzGeom(n) {
     const k = n.t === 'not' ? 1 : n.n, { BW, Hh, bub } = lvGateGeom(n.t, k), w = BW + bub + 28;
     return { w, h: Hh, BW, Hh, bub, ins: Array.from({ length: k }, (_, i) => ({ x: 0, y: Hh * (i + 1) / (k + 1) })), out: { x: w, y: Hh / 2 } };
   }
+  if (n.t === 'dff') return { w: 110, h: 84, ins: [{ x: 0, y: 22 }, { x: 0, y: 44 }, { x: 0, y: 66 }], out: { x: 110, y: 22 } };
   if (n.t === 'led') return { w: 96, h: 30, ins: [{ x: 0, y: 15 }], out: null };
   if (n.t === 'hex') return { w: 104, h: 88, ins: [0, 1, 2, 3].map(i => ({ x: 0, y: 17 + i * 18 })), out: null };
   return { w: 104, h: 36, ins: [], out: { x: 104, y: 18 } };
 }
 const dzSig = n => n.t === 'one' ? 'ONE' : n.t === 'zero' ? 'ZERO' : 'n' + n.id;
 const dzLive = () => !!D.built && D.builtVersion === benchVersion;
-const dzLabel = n => n.name || ({ and: 'AND', or: 'OR', nand: 'NAND', nor: 'NOR', xor: 'XOR', xnor: 'XNOR', not: 'NOT' }[n.t] || n.t) + ' #' + n.id;
+const dzLabel = n => n.name || ({ dff: 'D flip-flop', and: 'AND', or: 'OR', nand: 'NAND', nor: 'NOR', xor: 'XOR', xnor: 'XNOR', not: 'NOT' }[n.t] || n.t) + ' #' + n.id;
 // the height at which a feedback wire between two stacked parts (a latch) crosses over: in the gap between them,
 // just under the upper one, clear of the lower one's label
 function latchGap(ay, ah, by, bh, up) {
@@ -3535,7 +3590,7 @@ function dzRender(skipBar) {
   const out = [], byId = new Map(D.nodes.map(n => [n.id, n]));
   const live = dzLive(), B = live ? D.built : null;
   // every part's box, with room for a gate's label above it
-  const boxes = D.nodes.map(n => { const g = dzGeom(n), lab = GATE_T.has(n.t) ? 14 : 0; return { n, x: n.x, y: n.y - lab, w: g.w, h: g.h + lab }; });
+  const boxes = D.nodes.map(n => { const g = dzGeom(n), lab = GATE_T.has(n.t) || n.t === 'dff' ? 14 : 0; return { n, x: n.x, y: n.y - lab, w: g.w, h: g.h + lab }; });
   D.wires.forEach((w, i) => {
     const a = byId.get(w.from), b = byId.get(w.to); if (!a || !b) return;
     const ga = dzGeom(a), gb = dzGeom(b), bp = gb.ins[w.port]; if (!bp || !ga.out) return;
@@ -3555,6 +3610,14 @@ function dzRender(skipBar) {
       g.ins.forEach(p => { const bx = 14 + lvBackX(n.t, g.BW, g.Hh, p.y); s += `<line class="lv-line" x1="0" y1="${p.y}" x2="${bx}" y2="${p.y}"/>`; });
       s += `<line class="lv-line" x1="${14 + g.BW + g.bub}" y1="${g.Hh / 2}" x2="${g.w}" y2="${g.Hh / 2}"/>`;
       s += `<g transform="translate(14,0)">${lvGateBody({ type: n.t, nIn: g.ins.length, BW: g.BW, Hh: g.Hh, bub: g.bub })}</g>`;
+    } else if (n.t === 'dff') {
+      // D flip-flop, drawn like its IEEE 91 / IEC 60617-12 symbol: ▷ = rising-edge clock, ○ = active-low clear
+      const iec = SYM.std === 'iec', x0 = 14, x1 = g.w - 14, [pd, pc, pr] = g.ins;
+      s += `<text class="lv-s" x="${x0}" y="-7">${esc(n.name || 'D flip-flop')}</text><rect class="lv-body" x="${x0}" y="0" width="${x1 - x0}" height="${g.h}"/>`;
+      s += `<line class="lv-line" x1="0" y1="${pd.y}" x2="${x0}" y2="${pd.y}"/><line class="lv-line" x1="0" y1="${pc.y}" x2="${x0}" y2="${pc.y}"/><line class="lv-line" x1="0" y1="${pr.y}" x2="${x0 - 8}" y2="${pr.y}"/>`;
+      s += `<circle class="lv-body" cx="${x0 - 4}" cy="${pr.y}" r="4"/><path class="lv-line" d="M${x0},${pc.y - 5} L${x0 + 8},${pc.y} L${x0},${pc.y + 5}"/>`;
+      s += `<text class="lv-p" x="${x0 + 4}" y="${pd.y + 3.5}">${iec ? '1D' : 'D'}</text><text class="lv-p" x="${x0 + 11}" y="${pc.y + 3.5}">${iec ? 'C1' : ''}</text><text class="lv-p" x="${x0 + 4}" y="${pr.y + 3.5}">${iec ? 'R' : 'CLR'}</text>`;
+      s += `<line class="lv-line" x1="${x1}" y1="${g.out.y}" x2="${g.w}" y2="${g.out.y}"/><text class="lv-p" x="${x1 - 4}" y="${g.out.y + 3.5}" text-anchor="end">Q</text>`;
     } else if (n.t === 'led') {
       s += `<rect class="lv-body" x="12" y="0" width="${g.w - 12}" height="${g.h}" rx="5"/><line class="lv-line" x1="0" y1="15" x2="12" y2="15"/>`;
       s += `<circle class="lv-led" cx="28" cy="15" r="7"${B && B.nodes[n.id] ? ` data-term="${B.nodes[n.id].term}"` : ''}/><text class="lv-t" x="42" y="13">${esc(n.name || 'LED')}</text>`;
@@ -3641,6 +3704,7 @@ function dzDefaultName(t) {
   if (t === 'pulse') { for (let i = 1; ; i++) if (!used.has('P' + i)) return 'P' + i; }
   if (t === 'clk') return 'CLK';
   if (t === 'hex') return 'HEX';
+  if (t === 'dff') { for (let i = 1; ; i++) if (!used.has('Q' + i)) return 'Q' + i; }
   return '';
 }
 function dzAdd(t) {
@@ -3886,6 +3950,8 @@ function optimize(list, keep) {
   return list;
 }
 const SLOT_PREF = [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
+// the pins of the two flip-flops of a 7474
+const FF74 = [{ d: 2, c: 3, p: 4, r: 1, q: 5, qn: 6 }, { d: 12, c: 11, p: 10, r: 13, q: 9, qn: 8 }];
 function dzFail(msg) { const m = $('#dzMsg'); m.textContent = msg; m.classList.add('bad'); toast(msg, true); return false; }
 function dzBuild(skipOpt, noSplit) {
   guideStop();
@@ -3895,8 +3961,9 @@ function dzBuild(skipOpt, noSplit) {
   const warns = [];
   const of = t => D.nodes.filter(n => n.t === t);
   const sws = of('sw'), pls = of('pulse'), clks = of('clk'), leds = of('led'), hexes = of('hex');
-  const gates = D.nodes.filter(n => GATE_T.has(n.t));
+  const gates = D.nodes.filter(n => GATE_T.has(n.t)), dffs = of('dff');
   if (!D.nodes.length) return dzFail('The design is empty. Add some parts first.');
+  if (dffs.length > 8) return dzFail(`This design uses ${dffs.length} flip-flops; 4 7474s (8 flip-flops) is the most that leaves room for gates.`);
   if (sws.length > 8) return dzFail(`The switch register has 8 switches; this design uses ${sws.length}.`);
   if (pls.length > 3) return dzFail(`There are 3 pulse buttons; this design uses ${pls.length}.`);
   if (leds.length > 16) return dzFail(`The display register has 16 LEDs; this design uses ${leds.length}.`);
@@ -3929,6 +3996,20 @@ function dzBuild(skipOpt, noSplit) {
     if (ins.some(s => s == null)) warns.push(`${dzLabel(g)} has an unwired input. It's left open on the module and reads HIGH.`);
     prims.push({ t: g.t, ins, out: 'n' + g.id, node: g });
   }
+  // flip-flops: Q is the signal 'n<id>', ~Q is 'n<id>n'. A NOT on a Q is its ~Q pin instead (no inverter needed).
+  const ffRec = dffs.map(n => ({ n, q: 'n' + n.id, qn: 'n' + n.id + 'n', d: inSig(n, 0), c: inSig(n, 1), r: inSig(n, 2) }));
+  const ffQ = new Map(ffRec.map(f => [f.q, f])), ffAlias = new Map();
+  for (let i = prims.length - 1; i >= 0; i--) { const p = prims[i]; if (p.t === 'not' && ffQ.has(p.ins[0])) { ffAlias.set(p.out, ffQ.get(p.ins[0]).qn); prims.splice(i, 1); } }
+  if (ffAlias.size) {
+    const al = x => ffAlias.get(x) || x;
+    for (const p of prims) p.ins = p.ins.map(x => x == null ? x : al(x));
+    for (const k of sinks) k.sig = al(k.sig);
+    for (const f of ffRec) { f.d = f.d && al(f.d); f.c = f.c && al(f.c); f.r = f.r && al(f.r); }
+  }
+  for (const f of ffRec) {
+    if (f.d == null) warns.push(`${dzLabel(f.n)} has no D input: it reads HIGH.`);
+    if (f.c == null) warns.push(`${dzLabel(f.n)} has no clock, so it never changes.`);
+  }
   // fan-out: switch, pulse, LED and display pins have one header, so they can only sit at the two ends of a cable chain.
   // A signal that must reach more of them goes through a row of the splitter board, like in the lab; only when there is
   // no room for a splitter does it get buffer gates instead.
@@ -3949,6 +4030,7 @@ function dzBuild(skipOpt, noSplit) {
   const prefer = $('#dzPrefer').checked;
   const inCase = new Map(); for (const m of modules) inCase.set(m.type, (inCase.get(m.type) || 0) + 1);
   const keepSigs = new Set(sinks.map(k => k.sig));
+  for (const f of ffRec) for (const x of [f.d, f.c, f.r]) if (x) keepSigs.add(x);
   const STRATS = [{}, { '7404': 0.3, '7402': 2 }, { '7404': 0.3, '7400': 2 }];
   let best = null;
   const tried = new Set();
@@ -3988,17 +4070,24 @@ function dzBuild(skipOpt, noSplit) {
     ex.forEach(m => { insts.push({ c, m, used: [] }); keepMods.add(m); });
     for (let i = ex.length; i < k; i++) insts.push({ c, m: null, used: [] });
   }
+  // flip-flops: two per 7474, reusing 7474s already in the case
+  const ffNeed = Math.ceil(ffRec.length / 2);
+  const ffInsts = modules.filter(m => m.type === '7474').sort((a, b) => SLOT_PREF.indexOf(a.slot) - SLOT_PREF.indexOf(b.slot)).slice(0, ffNeed).map(m => ({ m }));
+  ffInsts.forEach(i => keepMods.add(i.m));
+  while (ffInsts.length < ffNeed) ffInsts.push({ m: null });
+  const ffNew = ffInsts.filter(i => !i.m).length;
   const newInst = insts.filter(i => !i.m);
   const freeSlots = SLOT_PREF.filter(s => !moduleAt(s)).concat(SLOT_PREF.filter(s => moduleAt(s) && !keepMods.has(moduleAt(s))));
-  if (splitSigs.size && !splitM && newInst.length + 1 > freeSlots.length) return dzBuild(skipOpt, true);   // no slot left for a splitter
-  if (newInst.length > freeSlots.length) return dzFail(`This design needs ${insts.length} modules, but the case only has 12 slots. Simplify it, or ${prefer ? 'turn off "Prefer chips already in the case"' : 'split it into parts'}.`);
+  if (splitSigs.size && !splitM && newInst.length + ffNew + 1 > freeSlots.length) return dzBuild(skipOpt, true);   // no slot left for a splitter
+  if (newInst.length + ffNew > freeSlots.length) return dzFail(`This design needs ${insts.length + ffInsts.length} modules, but the case only has 12 slots. Simplify it, or ${prefer ? 'turn off "Prefer chips already in the case"' : 'split it into parts'}.`);
   // ---- commit ----
   pushUndo();
   for (const w of wires.slice()) removeWire(w);
   const replaced = [];
   newInst.forEach((inst, i) => { const s = freeSlots[i], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } inst.m = createModule(inst.c, s, 0); inst.added = true; });
+  ffInsts.filter(i => !i.m).forEach((inst, i) => { const s = freeSlots[newInst.length + i], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } inst.m = createModule('7474', s, 0); inst.added = true; });
   let splitNew = false;
-  if (splitSigs.size && !splitM) { const s = freeSlots[newInst.length], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } splitM = createModule('SPLIT', s, 0); splitNew = true; }
+  if (splitSigs.size && !splitM) { const s = freeSlots[newInst.length + ffNew], old = moduleAt(s); if (old) { replaced.push(`${old.type} in slot ${s + 1}`); destroyModule(old); } splitM = createModule('SPLIT', s, 0); splitNew = true; }
   if (splitM) rebuild();
   let splitRow = 1;
   if (splitM) while (splitRow <= 7 && splitM.pt[splitRow].net.terms.length > 1) splitRow++;   // rows already in use stay as they are
@@ -4021,6 +4110,12 @@ function dzBuild(skipOpt, noSplit) {
     p.ins.forEach((s, j) => addT(s, p.inst.m.pt[gt.i[j]].id, false));
     addT(p.out, p.inst.m.pt[gt.o].id, true); sigTerm[p.out] = p.inst.m.pt[gt.o].id;
   }
+  ffRec.forEach((f, i) => {
+    const m = ffInsts[i >> 1].m, P = FF74[i & 1], pin = p => m.pt[p].id;
+    addT(f.d, pin(P.d), false); addT(f.c, pin(P.c), false); addT(f.r || 'ONE', pin(P.r), false); addT('ONE', pin(P.p), false);
+    addT(f.q, pin(P.q), true); sigTerm[f.q] = pin(P.q); addT(f.qn, pin(P.qn), true); sigTerm[f.qn] = pin(P.qn);
+  });
+  for (const [a, b] of ffAlias) sigTerm[a] = sigTerm[b];
   for (const [s, t] of sigDrv) { addT(s, t, true); sigTerm[s] = t; }
   for (const k of sinks) addT(k.sig, k.term, false);
   // cables
@@ -4075,7 +4170,7 @@ function dzBuild(skipOpt, noSplit) {
       cable(ha, hb, color);
     }
   }
-  if (!S.autoPower) wirePower(insts.map(i => i.m), { quiet: true });   // every module in use gets +5V and 0V
+  if (!S.autoPower) wirePower(insts.map(i => i.m).concat(ffInsts.map(i => i.m)), { quiet: true });   // every module in use gets +5V and 0V
   rebuild(); save();
   // optional: shorten the runs by moving modules and swapping equivalent gates, then follow the moves
   let optInfo = null;
@@ -4103,11 +4198,14 @@ function dzBuild(skipOpt, noSplit) {
   D.built = { sig: sigMap, nodes: builtNodes }; D.builtVersion = benchVersion; D.changed = false; D.fromBench = false;
   // report
   const cnt = {}; for (const i of insts) cnt[i.c] = (cnt[i.c] || 0) + 1;
-  const modsTxt = insts.map(i => `${i.c} in slot ${i.m.slot + 1}${i.added ? ' (new)' : ''}, ${i.used.length} of ${CHIPS[i.c].gates.length} gates`).join('; ');
+  // where the flip-flops ended up (the optimizer may have moved their 7474s)
+  const ffMods = [...new Set(ffRec.map(f => { const mm = /^m(\d+)\./.exec(sigTerm[f.q] || ''); return mm ? modules.find(x => x.uid === +mm[1]) : null; }).filter(Boolean))];
+  const modsTxt = insts.map(i => `${i.c} in slot ${i.m.slot + 1}${i.added ? ' (new)' : ''}, ${i.used.length} of ${CHIPS[i.c].gates.length} gates`)
+    .concat(ffMods.map(m => `7474 in slot ${m.slot + 1}${ffInsts.some(i => i.m === m && i.added) ? ' (new)' : ''}, ${ffRec.filter(f => (sigTerm[f.q] || '').startsWith('m' + m.uid + '.')).length} of 2 flip-flops`)).join('; ');
   const ioTxt = [...sws.map(n => `${esc(n.name || 'switch')} = switch ${swN.get(n)}`), ...pls.map(n => `${esc(n.name || 'pulse')} = pulse ${plN.get(n)} ${n.low ? '⊔' : '⊓'}`),
     ...clks.map(n => `${esc(n.name || 'clock')} = clock ${n.low ? '⊔' : '⊓'}`), ...leds.map(n => `${esc(n.name || 'LED')} = LED ${ledN.get(n)}`), ...hexes.map(() => 'display = 2⁰–2³ inputs')].join(' · ');
   const perGate = gates.map(g => { const ps = conc.filter(p => p.node === g); return `${esc(dzLabel(g))} → ${ps.map(p => `${p.inst.c}/slot ${p.inst.m.slot + 1} gate ${p.g + 1}`).join(', ') || 'merged into its neighbours (or its output is unused)'}`; });
-  $('#dzSum').innerHTML = `<p><b>${insts.length} module${insts.length === 1 ? '' : 's'}, ${conc.length} gates, ${cables} cables.</b> ${esc(modsTxt)}.</p>`
+  $('#dzSum').innerHTML = `<p><b>${insts.length + ffMods.length} module${insts.length + ffMods.length === 1 ? '' : 's'}, ${conc.length} gates${ffRec.length ? `, ${ffRec.length} flip-flop${ffRec.length === 1 ? '' : 's'}` : ''}, ${cables} cables.</b> ${esc(modsTxt)}.</p>`
     + (splitM && splitSigs.size ? `<p>Splitter in slot ${splitM.slot + 1}${splitNew ? ' (new)' : ''} fans out ${splitSigs.size} signal${splitSigs.size === 1 ? '' : 's'} to more single-pin ends than a chain can reach.</p>` : '')
     + (replaced.length ? `<p>Replaced to make room: ${esc(replaced.join(', '))}.</p>` : '')
     + `<p>${ioTxt}</p><p>${perGate.join('<br>')}</p>`
@@ -4116,7 +4214,7 @@ function dzBuild(skipOpt, noSplit) {
   $('#dzList').innerHTML = lines.map(l => `<li>${esc(l)}</li>`).join('');
   $('#dzReport').hidden = false; $('#dzReport').open = true;
   dzRender(); dzStatus();
-  toast(`Built: ${insts.length} module${insts.length === 1 ? '' : 's'} and ${cables} cables${best.newMods ? `, ${best.newMods} taken from the rack` : ', all from the case'}${optInfo && optInfo.applied ? `, runs ${optInfo.pct}% shorter after optimizing` : ''}. Undo on the top bar restores the old bench.`);
+  toast(`Built: ${insts.length + ffMods.length} module${insts.length + ffMods.length === 1 ? '' : 's'} and ${cables} cables${best.newMods ? `, ${best.newMods} taken from the rack` : ', all from the case'}${optInfo && optInfo.applied ? `, runs ${optInfo.pct}% shorter after optimizing` : ''}. Undo on the top bar restores the old bench.`);
   return true;
 }
 $('#dzBuild').onclick = () => dzBuild();
@@ -4629,6 +4727,7 @@ function designTable() {
   for (const n of D.nodes.filter(n => n.t === 'led' || n.t === 'hex').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y)) {
     if (n.t === 'led') outs.push({ n, port: 0, name: n.name || 'LED' }); else for (let i = 0; i < 4; i++) outs.push({ n, port: i, name: (n.name || 'HEX') + '.' + i });
   }
+  if (D.nodes.some(n => n.t === 'dff')) return { err: 'The design has flip-flops, so it is a state machine: its outputs depend on what happened before, not only on the inputs.' };
   if (!ins.length) return { err: 'The design has no switches or pulses to use as inputs.' };
   if (ins.length > 8) return { err: `The design has ${ins.length} inputs; the table handles up to 8.` };
   if (!outs.length) return { err: 'The design has no LEDs or display to use as outputs.' };
@@ -4890,8 +4989,9 @@ function ttSynthSmart() {
 // placed level with the average of its inputs where there is room, so most wires run straight across.
 function dzAutoLayout(nodes, wires) {
   const by = new Map(nodes.map(n => [n.id, n])), pred = new Map(nodes.map(n => [n.id, []])), succ = new Map(nodes.map(n => [n.id, []]));
-  for (const w of wires) { if (!by.has(w.from) || !by.has(w.to)) continue; pred.get(w.to).push(w.from); succ.get(w.from).push(w.to); }
-  const isSrc = n => n.t === 'sw' || n.t === 'pulse' || n.t === 'clk', isConst = n => n.t === 'one' || n.t === 'zero', sink = n => n.t === 'led' || n.t === 'hex';
+  // wires into a flip-flop are left out of the layering: they are the feedback of a state machine
+  for (const w of wires) { if (!by.has(w.from) || !by.has(w.to) || by.get(w.to).t === 'dff') continue; pred.get(w.to).push(w.from); succ.get(w.from).push(w.to); }
+  const isSrc = n => n.t === 'sw' || n.t === 'pulse' || n.t === 'clk' || n.t === 'dff', isConst = n => n.t === 'one' || n.t === 'zero', sink = n => n.t === 'led' || n.t === 'hex';
   // parts on a feedback loop (like the two gates of a latch) are one group and share a column (Tarjan's algorithm)
   const grp = new Map(), low = new Map(), idx = new Map(), stack = [];
   let ix = 0;
@@ -4941,7 +5041,7 @@ function dzAutoLayout(nodes, wires) {
       c.sort((a, b) => a._g - b._g || grp.get(a.id) - grp.get(b.id) || a._b - b._b); place(c);
     }
   }
-  const hOf = n => GATE_T.has(n.t) ? Math.max(2, n.t === 'not' ? 1 : n.n) * 14 + 8 : n.t === 'led' ? 30 : n.t === 'hex' ? 88 : 36;
+  const hOf = n => GATE_T.has(n.t) ? Math.max(2, n.t === 'not' ? 1 : n.n) * 14 + 8 : n.t === 'led' ? 30 : n.t === 'hex' ? 88 : n.t === 'dff' ? 98 : 36;
   const outY = n => { const g = dzGeom(n); return n.y + (g.out ? g.out.y : hOf(n) / 2); };
   const GAP = 30, CW = 190;
   cols.forEach((c, d) => {
@@ -4972,7 +5072,7 @@ function dzAutoLayout(nodes, wires) {
 const BD = { ver: -1, odd: null };
 function benchDesign() {
   const used = modules.filter(m => !m.def.passive && wires.some(w => wireTouches(w, m))).sort((a, b) => a.slot - b.slot);
-  const odd = [...new Set(used.filter(m => !m.def.gates).map(m => m.type))];
+  const odd = [...new Set(used.filter(m => !m.def.gates && m.type !== '7474').map(m => m.type))];
   if (odd.length) return { odd };
   // names from the design the bench was last built from (or taken from), by the pin they belong to
   const names = new Map();
@@ -4992,7 +5092,16 @@ function benchDesign() {
   let seq = 1;
   const add = o => { const n = { id: seq++, x: 0, y: 0, name: '', ...o }; nodes.push(n); return n; };
   const gateOut = new Map(), gates = [];
-  for (const m of used) m.def.gates.forEach((gt, k) => {
+  // 7474: each flip-flop in use is a designer D flip-flop (D, C, CLR; ~PRE is taken to be held HIGH). Its ~Q pin
+  // becomes a NOT on its Q.
+  const qnOut = new Map();
+  for (const m of used) if (m.type === '7474') FF74.forEach((P, k) => {
+    if (![P.d, P.c, P.r, P.p, P.q, P.qn].some(p => m.pt[p].net.terms.length > 1)) return;
+    const out = m.pt[P.q], f = add({ t: 'dff', name: names.get(out.id) || `M${m.slot + 1} 7474·${k + 1}`, key: slotKey(out.id) });
+    gateOut.set(out, f); sig['n' + f.id] = out.id; qnOut.set(m.pt[P.qn], f);
+    gates.push({ m, pins: [P.d, P.c, P.r], node: f });
+  });
+  for (const m of used) if (m.def.gates) m.def.gates.forEach((gt, k) => {
     if (![...gt.i, gt.o].some(p => m.pt[p].net.terms.length > 1)) return;   // an unused gate
     const out = m.pt[gt.o], name = names.get(out.id) || `M${m.slot + 1} ${m.type}·${k + 1}`, key = slotKey(out.id);
     let g;
@@ -5013,6 +5122,11 @@ function benchDesign() {
     if (drv.has(net)) return drv.get(net);
     let n = null, mm;
     for (const t of net.terms) if (gateOut.has(t)) { n = gateOut.get(t); break; }
+    if (!n) for (const t of net.terms) if (qnOut.has(t)) {
+      const f = qnOut.get(t);
+      n = source('qn' + t.id, () => { const v = add({ t: 'not', n: 1, key: t.id }); dw.push({ from: f.id, to: v.id, port: 0 }); sig['n' + v.id] = t.id; return v; });
+      break;
+    }
     if (!n) for (const t of net.terms) {
       const id = t.id;
       if ((mm = /^SW(\d)Q$/.exec(id))) n = sw(+mm[1]);
@@ -5074,6 +5188,330 @@ $('#ttMake').onclick = () => {
   if ($('#ttBuild').checked) setTimeout(() => dzBuild(), 30);
 };
 try { dzLoad(JSON.parse(localStorage.getItem('unilog2.design.v1') || 'null')); D.changed = D.nodes.length > 0 && !D.fromBench; } catch (_) {}
+
+/* ================================================================
+   STATE MACHINES: draw a Moore or Mealy automaton and get its circuit: D flip-flops (7474) for the state, gates for
+   the next-state and output functions, built on the bench like any design.
+   The input letters are the combinations of the input bits x1…xn (switches 1…n); the outputs y1…ym are LEDs 1…m.
+   CLK is pulse 1 (the 7474 takes the next state on its rising edge, when the button goes down) and RESET is pulse 2 ⊔
+   (to every flip-flop's CLR), so the first state (the initial one) gets the code 0…0.
+   Before synthesis the machine is reduced: states the initial state can't reach are dropped, and states that behave
+   the same (same outputs, and next states that are the same again, found by refining partitions) are merged. An arrow
+   or output left out is a don't-care. The next-state bits D and the outputs then form one truth table over the state
+   bits Q and the inputs, which goes through the same minimiser and gate synthesis as the truth table sheet.
+   ================================================================ */
+const FSM = { type: 'moore', nIn: 1, nOut: 1, states: [], seq: 1, tab: 'tt', view: { x: 0, y: 0, k: 1 }, autoFit: true, sel: null, drag: null, live: null };
+const FSM_R = 26;
+const fsmCodes = () => 1 << FSM.nIn;
+const fsmCodeStr = c => c.toString(2).padStart(FSM.nIn, '0');
+// output bits as typed: 0, 1, or - / x for "don't care"; padded with 0 to the number of outputs
+const fsmBits = (s, m) => (String(s || '').toLowerCase().replace(/x/g, '-').replace(/[^01-]/g, '') + '0'.repeat(m)).slice(0, m);
+function fsmSave() { try { localStorage.setItem('unilog2.fsm.v1', JSON.stringify({ type: FSM.type, nIn: FSM.nIn, nOut: FSM.nOut, states: FSM.states, seq: FSM.seq })); } catch (_) {} }
+function fsmNormalise() {
+  const nX = fsmCodes(), m = FSM.nOut, ids = new Set(FSM.states.map(s => s.id));
+  for (const s of FSM.states) {
+    s.out = fsmBits(s.out, m);
+    s.next = Array.from({ length: nX }, (_, c) => s.next && s.next[c] != null && ids.has(s.next[c]) ? s.next[c] : null);
+    s.mo = Array.from({ length: nX }, (_, c) => fsmBits(s.mo && s.mo[c], m));
+  }
+}
+try { const f = JSON.parse(localStorage.getItem('unilog2.fsm.v1') || 'null'); if (f && Array.isArray(f.states)) { Object.assign(FSM, f); fsmNormalise(); } } catch (_) {}
+function fsmMsg(s, bad) { const m = $('#fsmMsg'); m.textContent = s; m.classList.toggle('bad', !!bad); }
+const fsmById = id => FSM.states.find(s => s.id === id);
+function fsmNewName() { const used = new Set(FSM.states.map(s => s.name)); for (let i = 1; ; i++) if (!used.has('q' + i)) return 'q' + i; }
+function fsmAddState(x, y) {
+  const s = { id: FSM.seq++, name: fsmNewName(), x: Math.round(x / 10) * 10, y: Math.round(y / 10) * 10, out: '', next: [], mo: [] };
+  FSM.states.push(s); fsmNormalise(); FSM.sel = { st: s.id }; fsmChanged();
+}
+function fsmChanged() { fsmSave(); fsmRender(); fsmSelBar(); fsmInfoSoon(); }
+
+// ---- drawing
+const fsmLocal = e => fsmSvg.closest('.paper') ? paperPoint(fsmSvg, e) : (r => ({ x: e.clientX - r.left, y: e.clientY - r.top }))(fsmSvg.getBoundingClientRect());
+const fsmPt = e => { const p = fsmLocal(e), v = FSM.view; return { x: (p.x - v.x) / v.k, y: (p.y - v.y) / v.k }; };
+const fsmSvg = $('#fsmSvg'), fsmRoot = $('#fsmRoot');
+function fsmApply() { const v = FSM.view; fsmRoot.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); }
+function fsmFit() {
+  const W = fsmSvg.clientWidth, Hh = fsmSvg.clientHeight; if (!W || !Hh) return;
+  if (!FSM.states.length) { FSM.view = { x: W / 2, y: Hh / 2, k: 1 }; fsmApply(); return; }
+  const xs = FSM.states.map(s => s.x), ys = FSM.states.map(s => s.y);
+  const x0 = Math.min(...xs) - FSM_R - 80, x1 = Math.max(...xs) + FSM_R + 50, y0 = Math.min(...ys) - FSM_R - 70, y1 = Math.max(...ys) + FSM_R + 50;
+  const k = Math.min(1.6, (W - 20) / (x1 - x0), (Hh - 20) / (y1 - y0));
+  FSM.view = { k, x: (W - (x1 + x0) * k) / 2, y: (Hh - (y1 + y0) * k) / 2 }; fsmApply();
+}
+// arrows grouped by (from, to): the label lists the input letters (Mealy: letter/output)
+function fsmEdges() {
+  const map = new Map(), mealy = FSM.type === 'mealy';
+  for (const s of FSM.states) s.next.forEach((t, c) => {
+    if (t == null) return;
+    const key = s.id + '>' + t;
+    if (!map.has(key)) map.set(key, { from: s.id, to: t, codes: [] });
+    map.get(key).codes.push(c);
+  });
+  for (const e of map.values()) {
+    const s = fsmById(e.from);
+    e.label = e.codes.length === fsmCodes() && !mealy && FSM.nIn > 1 ? 'any' : e.codes.map(c => fsmCodeStr(c) + (mealy ? '/' + s.mo[c] : '')).join(', ');
+  }
+  return [...map.values()];
+}
+function fsmRender() {
+  const out = [], edges = fsmEdges(), has = new Set(edges.map(e => e.from + '>' + e.to)), sel = FSM.sel;
+  for (const e of edges) {
+    const a = fsmById(e.from), b = fsmById(e.to), on = sel && sel.from === e.from && sel.to === e.to;
+    let d, lx, ly;
+    if (a === b) {   // a loop above the state
+      const r = FSM_R, p1 = [a.x - r * 0.62, a.y - r * 0.78], p2 = [a.x + r * 0.62, a.y - r * 0.78];
+      d = `M${p1[0]},${p1[1]} C${a.x - 46},${a.y - 92} ${a.x + 46},${a.y - 92} ${p2[0]},${p2[1]}`; lx = a.x; ly = a.y - 78;
+    } else {
+      const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+      const bend = has.has(e.to + '>' + e.from) ? 26 : 0;
+      const cx = (a.x + b.x) / 2 + nx * bend * 2, cy = (a.y + b.y) / 2 + ny * bend * 2;
+      const at = (p, q, r) => { const ux = q[0] - p[0], uy = q[1] - p[1], l = Math.hypot(ux, uy) || 1; return [p[0] + ux / l * r, p[1] + uy / l * r]; };
+      const s0 = at([a.x, a.y], [cx, cy], FSM_R), s1 = at([b.x, b.y], [cx, cy], FSM_R + 2);
+      d = `M${s0[0]},${s0[1]} Q${cx},${cy} ${s1[0]},${s1[1]}`;
+      lx = (s0[0] + 2 * cx + s1[0]) / 4 + nx * 10 * (bend ? 1 : 0); ly = (s0[1] + 2 * cy + s1[1]) / 4 + ny * 10 * (bend ? 1 : 0) - (bend ? 0 : 6);
+    }
+    out.push(`<g class="fsm-ed${on ? ' sel' : ''}" data-ed="${e.from}>${e.to}"><path class="hit" d="${d}"/><path class="l" d="${d}" marker-end="url(#fsmArrow)"/><text x="${lx}" y="${ly}">${esc(e.label)}</text></g>`);
+  }
+  if (FSM.states.length) { const s = FSM.states[0]; out.push(`<path class="fsm-init" d="M${s.x - FSM_R - 34},${s.y} L${s.x - FSM_R - 2},${s.y}" marker-end="url(#fsmArrow)"/>`); }
+  for (const s of FSM.states) {
+    const on = sel && sel.st === s.id;
+    out.push(`<g class="fsm-st${on ? ' sel' : ''}" data-st="${s.id}" transform="translate(${s.x},${s.y})"><circle class="ring" r="${FSM_R + 5}" data-ring="${s.id}"/><circle class="body" r="${FSM_R}"/>`
+      + (FSM.type === 'moore' ? `<text y="-3">${esc(s.name)}</text><text class="o" y="12">${esc(s.out)}</text>` : `<text y="4">${esc(s.name)}</text>`) + '</g>');
+  }
+  out.push('<path class="fsm-temp" d=""/>');
+  fsmRoot.innerHTML = out.join('');
+  $('#fsmEmpty').hidden = FSM.states.length > 0;
+  if (FSM.autoFit) fsmFit(); else fsmApply();
+  FSM.liveName = null;
+}
+function fsmSelBar() {
+  const bar = $('#fsmSel'), sel = FSM.sel, mealy = FSM.type === 'mealy', nX = fsmCodes(), m = FSM.nOut;
+  const st = sel && sel.st != null ? fsmById(sel.st) : null;
+  if (!st && !(sel && sel.from != null)) {
+    bar.innerHTML = 'Double-click the paper (or press Add state) to add a state. Drag from the rim of a state to another state, or back to itself, to draw an arrow. Click a state or an arrow to edit it. The arrow from nowhere marks the initial state.';
+    return;
+  }
+  const opts = cur => `<option value="">–</option>` + FSM.states.map(s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
+  if (st) {
+    let h = `<b>State</b><label>Name <input type="text" id="fsmName" maxlength="8" value="${esc(st.name)}"></label>`;
+    if (!mealy) h += `<label>Output y <input type="text" id="fsmOut" maxlength="${m}" value="${esc(st.out)}" title="${m} bit${m === 1 ? '' : 's'}: 0, 1 or - (don't care)" style="width:${30 + m * 9}px"></label>`;
+    h += '<span>Next:</span>';
+    for (let c = 0; c < nX; c++) h += `<label>${fsmCodeStr(c)} → <select data-nx="${c}">${opts(st.next[c])}</select>` + (mealy ? ` / <input type="text" data-mo="${c}" maxlength="${m}" value="${esc(st.mo[c])}" style="width:${26 + m * 9}px">` : '') + '</label>';
+    if (FSM.states[0] !== st) h += '<button id="fsmInit">Make initial</button>';
+    h += '<button id="fsmDel">Delete</button>';
+    bar.innerHTML = h;
+    const nm = $('#fsmName'); nm.oninput = () => { st.name = nm.value.trim() || st.name; fsmSave(); fsmRender(); fsmInfoSoon(); };
+    const o = $('#fsmOut'); if (o) o.oninput = () => { st.out = fsmBits(o.value, m); fsmSave(); fsmRender(); fsmInfoSoon(); };
+    bar.querySelectorAll('[data-nx]').forEach(el => el.onchange = () => { st.next[+el.dataset.nx] = el.value ? +el.value : null; fsmSave(); fsmRender(); fsmInfoSoon(); });
+    bar.querySelectorAll('[data-mo]').forEach(el => el.oninput = () => { st.mo[+el.dataset.mo] = fsmBits(el.value, m); fsmSave(); fsmRender(); fsmInfoSoon(); });
+    const ini = $('#fsmInit'); if (ini) ini.onclick = () => { FSM.states.splice(FSM.states.indexOf(st), 1); FSM.states.unshift(st); fsmChanged(); };
+    $('#fsmDel').onclick = () => { FSM.states.splice(FSM.states.indexOf(st), 1); fsmNormalise(); FSM.sel = null; fsmChanged(); };
+    return;
+  }
+  const a = fsmById(sel.from), b = fsmById(sel.to);
+  if (!a || !b) { FSM.sel = null; return fsmSelBar(); }
+  let h = `<b>${esc(a.name)} → ${esc(b.name)}</b><span>on input</span>`;
+  for (let c = 0; c < nX; c++) {
+    const other = a.next[c] != null && a.next[c] !== b.id ? fsmById(a.next[c]) : null;
+    h += `<label title="${other ? 'Now goes to ' + esc(other.name) + '; ticking it moves the arrow here' : ''}"><input type="checkbox" data-c="${c}"${a.next[c] === b.id ? ' checked' : ''}> ${fsmCodeStr(c)}${other ? '*' : ''}`
+      + (mealy ? ` / <input type="text" data-mo="${c}" maxlength="${m}" value="${esc(a.mo[c])}" style="width:${26 + m * 9}px" title="output on this arrow">` : '') + '</label>';
+  }
+  h += '<button id="fsmDel">Delete arrow</button>';
+  bar.innerHTML = h;
+  bar.querySelectorAll('[data-c]').forEach(el => el.onchange = () => { const c = +el.dataset.c; if (el.checked) a.next[c] = b.id; else if (a.next[c] === b.id) a.next[c] = null; fsmSave(); fsmRender(); fsmInfoSoon(); });
+  bar.querySelectorAll('[data-mo]').forEach(el => el.oninput = () => { a.mo[+el.dataset.mo] = fsmBits(el.value, m); fsmSave(); fsmRender(); fsmInfoSoon(); });
+  $('#fsmDel').onclick = () => { a.next = a.next.map(t => t === b.id ? null : t); FSM.sel = null; fsmChanged(); };
+}
+// ---- pointer: drag a state to move it, drag from its rim to draw an arrow, drag the paper (in the panel) to pan
+fsmSvg.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const ring = e.target.closest('[data-ring]'), stEl = e.target.closest('[data-st]'), edEl = e.target.closest('[data-ed]');
+  try { fsmSvg.setPointerCapture(e.pointerId); } catch (_) {}
+  if (ring && e.target.classList.contains('ring')) { FSM.drag = { mode: 'link', from: +ring.dataset.ring }; return; }
+  if (stEl) {
+    const s = fsmById(+stEl.dataset.st), p = fsmPt(e);
+    FSM.sel = { st: s.id }; FSM.drag = { mode: 'move', s, ox: p.x - s.x, oy: p.y - s.y, moved: false };
+    fsmRender(); fsmSelBar(); return;
+  }
+  if (edEl) { const [f, t] = edEl.dataset.ed.split('>').map(Number); FSM.sel = { from: f, to: t }; FSM.drag = null; fsmRender(); fsmSelBar(); return; }
+  FSM.sel = null; fsmRender(); fsmSelBar();
+  if (!fsmSvg.closest('.paper')) { const p = fsmLocal(e); FSM.drag = { mode: 'pan', x: p.x, y: p.y, vx: FSM.view.x, vy: FSM.view.y }; }
+});
+fsmSvg.addEventListener('pointermove', e => {
+  const d = FSM.drag; if (!d) return;
+  if (d.mode === 'pan') { const p = fsmLocal(e); FSM.view.x = d.vx + p.x - d.x; FSM.view.y = d.vy + p.y - d.y; FSM.autoFit = false; fsmApply(); return; }
+  if (d.mode === 'move') { const p = fsmPt(e); d.s.x = Math.round((p.x - d.ox) / 10) * 10; d.s.y = Math.round((p.y - d.oy) / 10) * 10; d.moved = true; const af = FSM.autoFit; FSM.autoFit = false; fsmRender(); FSM.autoFit = af; return; }
+  if (d.mode === 'link') {
+    const a = fsmById(d.from), p = fsmPt(e), tmp = fsmRoot.querySelector('.fsm-temp');
+    if (a && tmp) tmp.setAttribute('d', `M${a.x},${a.y} L${p.x},${p.y}`);
+  }
+});
+const fsmEnd = e => {
+  const d = FSM.drag; FSM.drag = null; if (!d) return;
+  if (d.mode === 'move' && d.moved) { FSM.autoFit = false; fsmSave(); fsmRender(); }
+  if (d.mode !== 'link') return;
+  const tmp = fsmRoot.querySelector('.fsm-temp'); if (tmp) tmp.setAttribute('d', '');
+  const el = e && document.elementFromPoint(e.clientX, e.clientY), stEl = el && el.closest && el.closest('[data-st]');
+  if (!stEl) return;
+  const a = fsmById(d.from), b = fsmById(+stEl.dataset.st);
+  // the new arrow takes the first input letter that has no arrow yet; tick more of them in the bar
+  const c = a.next.findIndex(t => t == null);
+  if (c >= 0 && !a.next.includes(b.id)) a.next[c] = b.id;
+  FSM.sel = { from: a.id, to: b.id }; fsmChanged();
+};
+fsmSvg.addEventListener('pointerup', fsmEnd);
+fsmSvg.addEventListener('pointercancel', () => fsmEnd(null));
+fsmSvg.addEventListener('dblclick', e => { if (e.target.closest('[data-st],[data-ed]')) return; const p = fsmPt(e); fsmAddState(p.x, p.y); });
+fsmSvg.addEventListener('wheel', e => {
+  if (fsmSvg.closest('.paper')) return;
+  e.preventDefault(); FSM.autoFit = false;
+  svgWheel(e, fsmSvg, FSM.view, fsmApply, 0.3, 3);
+}, { passive: false });
+
+// ---- reduction, coding and the truth table of the next-state and output functions
+function fsmCompile() {
+  const all = FSM.states, mealy = FSM.type === 'mealy', nX = fsmCodes(), m = FSM.nOut;
+  if (!all.length) return { err: 'Add some states first.' };
+  const byId = new Map(all.map(s => [s.id, s]));
+  const reach = new Set([all[0].id]), stack = [all[0].id];
+  while (stack.length) for (const t of byId.get(stack.pop()).next) if (t != null && !reach.has(t)) { reach.add(t); stack.push(t); }
+  const live = all.filter(s => reach.has(s.id)), dropped = all.filter(s => !reach.has(s.id)).map(s => s.name);
+  // partition refinement (a missing arrow or output only matches another missing one)
+  const outSig = s => mealy ? s.next.map((t, c) => t == null ? '?' : s.mo[c]).join('|') : s.out;
+  let blk = new Map(), sigs = new Map();
+  live.forEach(s => { const g = outSig(s); if (!sigs.has(g)) sigs.set(g, sigs.size); blk.set(s.id, sigs.get(g)); });
+  for (let it = 0; it < 64; it++) {
+    const nb = new Map(), ns = new Map();
+    live.forEach(s => { const g = blk.get(s.id) + ':' + s.next.map(t => t == null ? '?' : blk.get(t)).join(','); if (!ns.has(g)) ns.set(g, ns.size); nb.set(s.id, ns.get(g)); });
+    const same = ns.size === sigs.size; blk = nb; sigs = ns; if (same) break;
+  }
+  // classes in drawing order, the initial state's first (code 0)
+  const cls = [], clsOf = new Map();
+  live.forEach(s => { const b = blk.get(s.id); if (!clsOf.has(b)) { clsOf.set(b, cls.length); cls.push({ rep: s, members: [] }); } cls[clsOf.get(b)].members.push(s); });
+  const N = cls.length, k = Math.max(1, Math.ceil(Math.log2(N)));
+  if (k > 4) return { err: `${N} states need ${k} flip-flops; the case has room for up to 4 (16 states).` };
+  if (FSM.nIn + k > 8) return { err: 'Too many state bits and inputs together (8 at most).' };
+  const cOf = s => clsOf.get(blk.get(s.id));
+  const nextC = (ci, x) => { const t = cls[ci].rep.next[x]; return t == null ? null : cOf(byId.get(t)); };
+  const n = k + FSM.nIn, rows = 1 << n, out = [];
+  const bit = ch => ch === '1' ? 1 : ch === '0' ? 0 : 2;
+  for (let r = 0; r < rows; r++) {
+    const q = r >> FSM.nIn, x = r & (nX - 1), row = [];
+    const nc = q < N ? nextC(q, x) : null;
+    for (let j = 0; j < k; j++) row.push(nc == null ? 2 : nc >> (k - 1 - j) & 1);
+    for (let j = 0; j < m; j++) row.push(q >= N ? 2 : mealy ? (nc == null ? 2 : bit(cls[q].rep.mo[x][j])) : bit(cls[q].rep.out[j]));
+    out.push(row);
+  }
+  const Q = Array.from({ length: k }, (_, j) => 'Q' + (j + 1)), X = Array.from({ length: FSM.nIn }, (_, j) => 'x' + (j + 1)), Y = Array.from({ length: m }, (_, j) => 'y' + (j + 1));
+  return { k, N, cls, dropped, nextC, tbl: { n, m: k + m, inN: [...Q, ...X], outN: [...Q.map(q => 'D' + q.slice(1)), ...Y], out, note: '' } };
+}
+// run a truth-table function on another table (and style), then put the sheet's own table back
+function withTT(tbl, style, fn) {
+  const save = { n: TT.n, m: TT.m, inN: TT.inN, outN: TT.outN, out: TT.out, note: TT.note }, sel = $('#ttStyle'), old = sel.value;
+  Object.assign(TT, tbl); if (style) sel.value = style;
+  try { return fn(); } finally { Object.assign(TT, save); sel.value = old; }
+}
+const fsmCodeOf = (ci, k) => ci.toString(2).padStart(k, '0');
+let fsmInfoTimer = 0;
+function fsmInfoSoon() { clearTimeout(fsmInfoTimer); fsmInfoTimer = setTimeout(fsmInfo, 120); }
+function fsmInfo() {
+  const box = $('#fsmInfo'), c = fsmCompile();
+  if (c.err) { box.innerHTML = `<div class="nt">${esc(c.err)}</div>`; return; }
+  const mealy = FSM.type === 'mealy', nX = fsmCodes();
+  const notes = [];
+  if (c.dropped.length) notes.push(`Unreachable, left out: ${c.dropped.map(esc).join(', ')}.`);
+  const merged = c.cls.filter(g => g.members.length > 1);
+  if (merged.length) notes.push(`Equivalent, merged: ${merged.map(g => g.members.map(s => esc(s.name)).join(' = ')).join('; ')}.`);
+  if (!notes.length) notes.push('The machine is already minimal.');
+  let h = `<div class="nt">${notes.join(' ')} ${c.N} state${c.N === 1 ? '' : 's'} → ${c.k} flip-flop${c.k === 1 ? '' : 's'} (7474 × ${Math.ceil(c.k / 2)}).</div>`;
+  h += '<table class="fsm-tab"><tr><th>state</th><th>Q</th>' + Array.from({ length: nX }, (_, x) => `<th>x=${fsmCodeStr(x)}</th>`).join('') + (mealy ? '' : '<th>y</th>') + '</tr>';
+  c.cls.forEach((g, ci) => {
+    h += `<tr><td>${esc(g.members.map(s => s.name).join('='))}</td><td>${fsmCodeOf(ci, c.k)}</td>`;
+    for (let x = 0; x < nX; x++) { const nc = c.nextC(ci, x); h += `<td>${nc == null ? '–' : esc(c.cls[nc].rep.name)}${mealy ? ' / ' + (nc == null ? '–' : esc(g.rep.mo[x])) : ''}</td>`; }
+    h += (mealy ? '' : `<td>${esc(g.rep.out)}</td>`) + '</tr>';
+  });
+  h += '</table>';
+  h += withTT(c.tbl, null, () => ttSolve(false).map((s, j) => `<div><b>${esc(TT.outN[j])}</b> = ${s.konst != null ? s.konst : s.terms.map(t => t.map(litHTML).join('·')).join(' + ')}</div>`).join(''));
+  box.innerHTML = h;
+}
+// ---- the circuit: synthesise the table, then the state-bit inputs become flip-flops and the D outputs their inputs
+function fsmMake() {
+  const c = fsmCompile(); if (c.err) return fsmMsg(c.err, true);
+  if (FSM.nOut > 16) return fsmMsg('The display register has 16 LEDs.', true);
+  const des = withTT(c.tbl, $('#fsmStyle').value, ttSynth), k = c.k, ffs = [];
+  for (const n of des.nodes) {
+    if (n.t === 'sw' && n.k <= k) { ffs[n.k - 1] = n; n.t = 'dff'; n.name = 'Q' + n.k; delete n.k; }
+    else if (n.t === 'sw') n.k -= k;
+  }
+  const drop = new Set();
+  for (const n of des.nodes) if (n.t === 'led') {
+    if (n.k <= k) { drop.add(n.id); const ff = ffs[n.k - 1]; for (const w of des.wires) if (w.to === n.id) { w.to = ff.id; w.port = 0; } }
+    else n.k -= k;
+  }
+  des.nodes = des.nodes.filter(n => !drop.has(n.id));
+  let id = des.seq;
+  const clk = { id: id++, t: 'pulse', k: 1, name: 'CLK', x: 0, y: 0 }, rst = { id: id++, t: 'pulse', k: 2, low: true, name: 'RESET', x: 0, y: 0 };
+  des.nodes.push(clk, rst);
+  for (const f of ffs) des.wires.push({ from: clk.id, to: f.id, port: 1 }, { from: rst.id, to: f.id, port: 2 });
+  des.seq = id;
+  dzAutoLayout(des.nodes, des.wires);
+  dzPush(); dzLoad(des); DZ.sel = null; D.changed = true; dzSave();
+  lvMode('design'); dzRender(); requestAnimationFrame(dzFit);
+  FSM.live = { ffs: ffs.map(f => f.id), names: c.cls.map(g => g.members.map(s => s.id)) };
+  const gates = des.nodes.filter(n => GATE_T.has(n.t)).length;
+  const msg = `Circuit created: ${k} D flip-flop${k === 1 ? '' : 's'} and ${gates} gate${gates === 1 ? '' : 's'}. Pulse 1 = CLK, pulse 2 = RESET (to the initial state), switches 1–${FSM.nIn} = x, LEDs 1–${FSM.nOut} = y.`;
+  fsmMsg(msg); toast(msg + ($('#fsmBuild').checked ? '' : ' Press Build on bench in the logic view to wire it.'));
+  if ($('#fsmBuild').checked) setTimeout(() => dzBuild(), 30);
+}
+// ---- after building: the state the bench is in, read from the flip-flops' Q pins, is highlighted
+setInterval(() => {
+  if ($('#fsmPane').hidden || $('#ttBox').hidden) return;
+  let ids = null;
+  const L = FSM.live;
+  if (L && dzLive() && L.ffs.every(id => D.nodes.some(n => n.id === id && n.t === 'dff'))) {
+    let q = 0, ok = true;
+    for (const id of L.ffs) { const t = T.get(D.built.sig['n' + id] || ''); if (!t || !t.net) { ok = false; break; } q = q * 2 + (powerOn && t.net.s === 'H' ? 1 : 0); }
+    if (ok && powerOn) ids = L.names[q] || [];
+  }
+  const key = ids ? ids.join(',') : '';
+  if (key === FSM.liveName) return;
+  FSM.liveName = key;
+  fsmRoot.querySelectorAll('.fsm-st').forEach(g => g.classList.toggle('cur', !!ids && ids.includes(+g.dataset.st)));
+}, 150);
+// ---- the bar and the tabs
+function fsmExample() {
+  const mealy = FSM.type === 'mealy';
+  // detects two 1s in a row on x1
+  FSM.nIn = 1; FSM.nOut = 1; FSM.seq = 4;
+  FSM.states = mealy
+    ? [{ id: 1, name: 'A', x: 0, y: 0, out: '0', next: [1, 2], mo: ['0', '0'] }, { id: 2, name: 'B', x: 200, y: 0, out: '0', next: [1, 2], mo: ['0', '1'] }]
+    : [{ id: 1, name: 'A', x: 0, y: 0, out: '0', next: [1, 2], mo: [] }, { id: 2, name: 'B', x: 180, y: 0, out: '0', next: [1, 3], mo: [] }, { id: 3, name: 'C', x: 360, y: 0, out: '1', next: [1, 3], mo: [] }];
+  fsmNormalise(); FSM.sel = null; FSM.autoFit = true; fsmBarSync(); fsmChanged();
+  fsmMsg('Example: y = 1 after two 1s in a row on x1.');
+}
+function fsmBarSync() { $('#fsmType').value = FSM.type; $('#fsmNIn').value = FSM.nIn; $('#fsmNOut').value = FSM.nOut; }
+$('#fsmType').onchange = e => { FSM.type = e.target.value; fsmChanged(); };
+$('#fsmNIn').onchange = e => { FSM.nIn = +e.target.value; fsmNormalise(); fsmChanged(); };
+$('#fsmNOut').onchange = e => { FSM.nOut = +e.target.value; fsmNormalise(); fsmChanged(); };
+$('#fsmAdd').onclick = () => {
+  const r = { width: fsmSvg.clientWidth, height: fsmSvg.clientHeight }, v = FSM.view, n = FSM.states.length;
+  const x = n ? Math.max(...FSM.states.map(s => s.x)) + 160 : (r.width / 2 - v.x) / v.k, y = n ? FSM.states[n - 1].y : (r.height / 2 - v.y) / v.k;
+  FSM.autoFit = true; fsmAddState(x, y);
+};
+$('#fsmEx').onclick = fsmExample;
+$('#fsmClear').onclick = () => { if (!FSM.states.length) return; FSM.states = []; FSM.sel = null; FSM.autoFit = true; fsmChanged(); fsmMsg('Cleared.'); };
+$('#fsmFit').onclick = () => { FSM.autoFit = true; fsmFit(); };
+$('#fsmMake').onclick = fsmMake;
+function ttTab(tab) {
+  FSM.tab = tab;
+  $('#ttPane').hidden = tab !== 'tt'; $('#fsmPane').hidden = tab !== 'fsm';
+  $('#ttTabTT').setAttribute('aria-pressed', String(tab === 'tt')); $('#ttTabFsm').setAttribute('aria-pressed', String(tab === 'fsm'));
+  if (tab === 'fsm') { fsmBarSync(); fsmRender(); fsmSelBar(); fsmInfo(); requestAnimationFrame(() => { if (FSM.autoFit) fsmFit(); }); } else ttRender();
+}
+$('#ttTabTT').onclick = () => ttTab('tt');
+$('#ttTabFsm').onclick = () => ttTab('fsm');
+fsmBarSync();
+try { new ResizeObserver(() => { if (FSM.autoFit && !$('#fsmPane').hidden) fsmFit(); }).observe(fsmSvg); } catch (_) {}
 
 /* ================================================================
    PRINTED LAB SHEET: case layout, truth table, logic diagram, wiring list (one row per cable, in build order)
@@ -5423,7 +5861,7 @@ function paperUnder() {
   ray.far = Infinity;
   return blocked ? null : k;
 }
-const PAPER_CTRL = 'button,input,select,label,summary,textarea,a,[data-act],[data-node],[data-in],[data-out],[data-wire],.lv-e,#ttTable,.hp-nav,#dzReport';
+const PAPER_CTRL = 'button,input,select,label,summary,textarea,a,[data-act],[data-node],[data-in],[data-out],[data-wire],.lv-e,#ttTable,.hp-nav,#dzReport,#fsmSvg,#fsmInfo';
 for (const k in SHEET) {
   const el = SHEET[k].el;
   // hand the pointer back to the canvas once it leaves the visible part of the page
