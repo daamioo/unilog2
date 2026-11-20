@@ -502,7 +502,8 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
       <li><kbd>L</kbd> logic view and <kbd>T</kbd> truth table on the screen (press again to put them back), <kbd>H</kbd> this manual, <kbd>O</kbd> oscilloscope (press again, or <kbd>Esc</kbd>, to go back), <kbd>B</kbd> the default bench view, <kbd>W</kbd> the wiring guide. <kbd>P</kbd> prints, <kbd>Ctrl</kbd>+<kbd>S</kbd> saves and <kbd>Ctrl</kbd>+<kbd>O</kbd> loads a file.</li>
     </ul>
     <h3>Camera</h3>
-    <ul><li>Right-drag to orbit, middle-drag to pan, scroll to zoom. That works over the sheets and this pamphlet too. On touch screens, use two fingers. This pamphlet lies on the table to the right of the case.</li></ul>
+    <ul><li>Drag empty space (or right-drag) to orbit. <kbd>Shift</kbd>+drag or middle-drag pans. The mouse wheel zooms. On a trackpad, swipe with two fingers to pan and pinch to zoom. That works over the sheets and this pamphlet too. On touch screens, use two fingers.</li>
+    <li>In the logic view on the screen, drag the empty paper to move the drawing. Use the wheel or a pinch to zoom, or swipe with two fingers to pan. <b>Tidy up</b> fits the drawing again. This pamphlet lies on the table to the right of the case.</li></ul>
   </div></div>
   <footer class="hp-nav"><button id="hpPrev" aria-label="Previous page">‹ Back</button><span id="hpNum">1 / 1</span><button id="hpNext" aria-label="Next page">Next ›</button></footer>
 </div>
@@ -839,6 +840,43 @@ controls.mouseButtons = { LEFT: -1, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.
 controls.touches = { ONE: -1, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.minDistance = 14; controls.maxDistance = 170; controls.maxPolarAngle = 1.38;
 controls.screenSpacePanning = true;
+
+// Trackpads send wheel events too. A two-finger swipe comes as small, smooth deltas (often with some deltaX); a pinch
+// comes as a wheel with ctrlKey set (Chrome, Edge, Firefox) or as Safari's gesture events. A mouse wheel moves in big
+// notches. A gesture keeps the kind it started with until it pauses, so a fast swipe doesn't turn into zooming.
+const WHEEL = { pad: false, t: 0 };
+function wheelKind(e) {
+  if (e.ctrlKey) return 'pinch';
+  const now = performance.now();
+  if (now - WHEEL.t > 250) WHEEL.pad = e.deltaMode === 0 && (e.deltaX !== 0 || Math.abs(e.deltaY) < 50);
+  WHEEL.t = now;
+  return WHEEL.pad ? 'pan' : 'zoom';
+}
+// a wheel's deltas in pixels (Firefox can report lines or pages)
+const wheelPx = e => { const f = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1; return { dx: e.deltaX * f, dy: e.deltaY * f }; };
+// The camera moves of OrbitControls, done by hand for the trackpad: the wheel and left-drags on empty space.
+function camDolly(f) {
+  const off = camera.position.clone().sub(controls.target);
+  off.setLength(Math.max(controls.minDistance, Math.min(controls.maxDistance, off.length() * f)));
+  camera.position.copy(controls.target).add(off); controls.update(); invalidate();
+}
+// move the view so the scene follows the pointer by (dx, dy) pixels
+function camPan(dx, dy) {
+  const s = 2 * camera.position.distanceTo(controls.target) * Math.tan(camera.fov * Math.PI / 360) / (canvas.clientHeight || 1);
+  camera.updateMatrix();
+  const v = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0).multiplyScalar(-dx * s)
+    .add(new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1).multiplyScalar(dy * s));
+  const t = controls.target.clone().add(v);   // keep the point looked at near the table
+  t.x = Math.max(-90, Math.min(90, t.x)); t.y = Math.max(-5, Math.min(45, t.y)); t.z = Math.max(-90, Math.min(90, t.z));
+  v.copy(t).sub(controls.target);
+  camera.position.add(v); controls.target.add(v); controls.update(); invalidate();
+}
+function camOrbit(dx, dy) {
+  const h = canvas.clientHeight || 1, off = camera.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off);
+  sp.theta -= 2 * Math.PI * dx / h;
+  sp.phi = Math.max(0.05, Math.min(controls.maxPolarAngle, sp.phi - 2 * Math.PI * dy / h));
+  off.setFromSpherical(sp); camera.position.copy(controls.target).add(off); controls.update(); invalidate();
+}
 
 scene.add(new THREE.HemisphereLight(0xe8eef5, 0x2a2018, 0.62));
 const sun = new THREE.DirectionalLight(0xfff0d8, 0.9);
@@ -2514,6 +2552,13 @@ function onMove(e) {
       else if (ud.kind === 'wireEnd') { pickUpEnd(ud.w, ud.end); ptr.mode = 'wire'; }
       else if (ud.kind === 'module') { startModuleDrag(ud.m); ptr.mode = 'module'; }
     }
+    // a drag on empty space moves the camera (left-drag orbits, Shift+drag pans), for trackpads without a right button
+    if (!ptr.mode && !ud && e.pointerType !== 'touch' && controls.enabled) { ptr.mode = e.shiftKey ? 'pan' : 'orbit'; ptr.lx = ptr.down.x; ptr.ly = ptr.down.y; hideTip(); }
+  }
+  if (ptr.mode === 'orbit' || ptr.mode === 'pan') {
+    const dx = e.clientX - ptr.lx, dy = e.clientY - ptr.ly; ptr.lx = e.clientX; ptr.ly = e.clientY;
+    if (ptr.mode === 'orbit') camOrbit(dx, dy); else camPan(dx, dy);
+    canvas.style.cursor = 'grabbing'; return;
   }
   if (ptr.mode === 'knob') {
     S.cal = Math.max(0, Math.min(1, ptr.cal0 + ((e.clientX - ptr.down.x) - (e.clientY - ptr.down.y)) / 260));
@@ -2548,6 +2593,7 @@ canvas.addEventListener('pointerup', e => {
   if (ptr.mode === 'pulse') { releasePulse(ptr.pulse); ptr.mode = null; return; }
   if (ptr.mode === 'knob') { ptr.mode = null; save(); return; }
   if (ptr.mode === 'module') { ptr.mode = null; endModuleDrag(); return; }
+  if (ptr.mode === 'orbit' || ptr.mode === 'pan') { ptr.mode = null; canvas.style.cursor = ''; return; }
   if (ptr.mode === 'wire') {
     ptr.mode = null;
     const hit = pick(); const ud = hit ? hit.object.userData : null;
@@ -2588,7 +2634,22 @@ window.addEventListener('wheel', e => {
     S.cal = Math.max(0, Math.min(1, S.cal - Math.sign(e.deltaY) * 0.03));
     syncPanelVisuals(); resetClock(); save(); showTip(e.clientX, e.clientY, controlTip({ kind: 'knob' }));
   }
+  if (e.defaultPrevented) return;
+  // the camera: a mouse wheel zooms, a trackpad pinch zooms, a two-finger swipe pans
+  e.preventDefault(); e.stopPropagation();
+  if (!controls.enabled) return;
+  const kind = wheelKind(e), { dx, dy } = wheelPx(e);
+  if (kind === 'pan') camPan(-dx, -dy);
+  else if (kind === 'pinch') camDolly(Math.exp(dy * 0.01));
+  else if (dy) camDolly(dy > 0 ? 1 / 0.95 : 0.95);
 }, { capture: true, passive: false });
+// Safari pinches with gesture events instead of the wheel; without this it would zoom the whole page
+let gestScale = 1;
+for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, e => {
+  e.preventDefault();
+  if (t === 'gesturestart') { gestScale = 1; return; }
+  if (t === 'gesturechange' && controls.enabled && (e.target === canvas || (e.target.closest && e.target.closest('.paper')))) { camDolly(gestScale / e.scale); gestScale = e.scale; }
+}, { passive: false });
 window.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input,textarea,select')) { if (e.key !== 'Escape') return; e.target.blur(); }
   // while the wiring guide is open, → plugs in the next cable and ← takes the last one off again
@@ -3299,7 +3360,13 @@ const lvLocal = e => { const p = lvSvg.closest('.paper') ? paperPoint(lvSvg, e) 
 lvSvg.addEventListener('pointerdown', e => {
   if (e.button !== 0) return;
   const nodeEl = e.target.closest('[data-key]'), actEl = e.target.closest('[data-act]');
-  if (!nodeEl) return;
+  if (!nodeEl) {   // in the panel, dragging the empty paper pans the drawing
+    if (lvSvg.closest('.paper')) return;
+    const r = lvSvg.getBoundingClientRect();
+    LV.pan = { x: e.clientX - r.left, y: e.clientY - r.top, vx: LV.view.x, vy: LV.view.y };
+    try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
   const [k, v] = actEl ? actEl.dataset.act.split(':') : [];
   if (k === 'pulse') { pressControl({ kind: 'pulse', i: +v }); lvPulse = +v; }   // held while the button is down
   const p = lvLocal(e), tr = /translate\(([-\d.]+),([-\d.]+)\)/.exec(nodeEl.getAttribute('transform'));
@@ -3307,6 +3374,11 @@ lvSvg.addEventListener('pointerdown', e => {
   try { lvSvg.setPointerCapture(e.pointerId); } catch (_) {}
 });
 lvSvg.addEventListener('pointermove', e => {
+  if (LV.pan) {
+    const r = lvSvg.getBoundingClientRect();
+    LV.view.x = LV.pan.vx + e.clientX - r.left - LV.pan.x; LV.view.y = LV.pan.vy + e.clientY - r.top - LV.pan.y;
+    LV.autoFit = false; lvApply(); return;
+  }
   const dr = LV.drag;
   if (dr) {
     if (!dr.moved && Math.hypot(e.clientX - dr.sx, e.clientY - dr.sy) < 5) return;
@@ -3324,6 +3396,7 @@ lvSvg.addEventListener('pointermove', e => {
   showTip(e.clientX, e.clientY, html);
 });
 const lvUp = () => {
+  LV.pan = null;
   if (lvPulse != null) { releasePulse(lvPulse); lvPulse = null; }
   const dr = LV.drag; LV.drag = null; if (!dr) return;
   if (dr.moved) { lvSavePos(); return; }
@@ -3336,6 +3409,20 @@ const lvUp = () => {
 lvSvg.addEventListener('pointerup', lvUp);
 lvSvg.addEventListener('pointercancel', lvUp);
 lvSvg.addEventListener('pointerleave', () => { hideTip(); lvHoverModule(null); });
+// Zooming and panning a drawing in the panel (on the sheet the wheel moves the camera): the mouse wheel and a trackpad
+// pinch zoom around the pointer, a two-finger swipe pans.
+function svgWheel(e, svg, v, apply, kMin, kMax) {
+  const r = svg.getBoundingClientRect(), p = { x: e.clientX - r.left, y: e.clientY - r.top };
+  const kind = wheelKind(e), { dx, dy } = wheelPx(e);
+  if (kind === 'pan') { v.x -= dx; v.y -= dy; apply(); return; }
+  const k = Math.max(kMin, Math.min(kMax, v.k * Math.exp(-dy * (kind === 'pinch' ? 0.01 : 0.0015))));
+  v.x = p.x - (p.x - v.x) * (k / v.k); v.y = p.y - (p.y - v.y) * (k / v.k); v.k = k; apply();
+}
+lvSvg.addEventListener('wheel', e => {
+  if (lvSvg.closest('.paper')) return;
+  e.preventDefault(); LV.autoFit = false;
+  svgWheel(e, lvSvg, LV.view, lvApply, 0.15, 4);
+}, { passive: false });
 
 /* ================================================================
    DESIGN MODE: draw with ideal gates, then solve onto real modules
@@ -3681,12 +3768,11 @@ dzSvg.addEventListener('dblclick', e => {
   for (let k = 0; k + 1 < chain.length; k++) { const add = len(chain[k], q) + len(q, chain[k + 1]) - len(chain[k], chain[k + 1]); if (add < bd) { bd = add; best = k; } }
   dzPush(); w.pts = pts.slice(); w.pts.splice(best, 0, q); DZ.sel = { wire: wi }; dzLayoutChanged();
 });
-// in the panel the wheel zooms the design (on the sheet it moves the camera)
+// in the panel the wheel and a pinch zoom the design and a two-finger swipe pans it (on the sheet they move the camera)
 dzSvg.addEventListener('wheel', e => {
   if (dzSvg.closest('.paper')) return;
   e.preventDefault();
-  const p = dzLocal(e), v = DZ.view, k = Math.max(0.25, Math.min(3, v.k * Math.exp(-e.deltaY * 0.0015)));
-  v.x = p.x - (p.x - v.x) * (k / v.k); v.y = p.y - (p.y - v.y) * (k / v.k); v.k = k; dzApply();
+  svgWheel(e, dzSvg, DZ.view, dzApply, 0.25, 3);
 }, { passive: false });
 dzSvg.addEventListener('pointercancel', () => dzEnd(null));
 document.querySelectorAll('#dzPalette [data-add]').forEach(b => b.onclick = () => dzAdd(b.dataset.add));
