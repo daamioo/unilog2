@@ -273,6 +273,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 .lv-t{fill:var(--fg);font:600 11px var(--f-mono)}
 .lv-s{fill:var(--muted);font:10px var(--f-mono)}
 .lv-p{fill:#c9c4b4;font:500 10px var(--f-mono)}
+.lv-q{fill:var(--lv-ink);font:700 12px var(--f-mono)}
 .lv-dot{fill:var(--lv-off)}
 .lv-dot[data-s="H"]{fill:var(--hi)}.lv-dot[data-s="L"]{fill:var(--lv-lo)}.lv-dot[data-s="Z"]{fill:var(--float)}.lv-dot[data-s="X"]{fill:var(--warn)}
 .lv-led{fill:#3a1512;stroke:#0008}
@@ -339,6 +340,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 #printView .diagram .lv-hit,#printView .diagram .dz-temp{display:none}
 #printView .diagram .lv-t{fill:#000;font:600 11px Arial,sans-serif}
 #printView .diagram .lv-s,#printView .diagram .lv-p{fill:#333;font:10px Arial,sans-serif}
+#printView .diagram .lv-q{fill:#000;font:700 11px Arial,sans-serif}
 #printView .diagram .lv-led{fill:#fff;stroke:#000;filter:none}
 #printView .diagram .lv-dot,#printView .diagram .dz-port{fill:#000;stroke:none}
 #printView .diagram .lv-seg{fill:#ddd}
@@ -355,7 +357,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
   <header class="ph"><b class="ph-t">UNILOG-2 circuit</b><span class="ph-k">Logic diagram</span><span class="ph-d"></span></header>
   <p id="lvAway" class="away" hidden>The logic view is open on the screen.<br><button id="lvBackSheet">Put it back on the sheet</button></p>
   <div id="lvBox">
-  <nav class="hp-tabs lv-tools"><label>Lines <select id="lvLines" aria-label="How wires are drawn"><option value="curved">Curved</option><option value="square">Square</option><option value="round">Square, rounded corners</option><option value="straight">Straight</option></select></label><button id="lvTidy" title="Lay the drawing out again automatically (Undo brings your arrangement back in the designer)">Tidy up</button><span class="grow"></span><button id="lvPop" title="Open the logic view in a panel on the screen (L)">Open on the screen ⧉</button></nav>
+  <nav class="hp-tabs lv-tools"><label>Lines <select id="lvLines" aria-label="How wires are drawn"><option value="curved">Curved</option><option value="square">Square</option><option value="round">Square, rounded corners</option><option value="straight">Straight</option></select></label><label>Symbols <select id="lvSym" aria-label="Which standard the logic symbols follow" title="ANSI/IEEE 91: distinctive gate shapes. IEC 60617-12 (PN-EN): rectangles with &amp;, ≥1, =1, 1. Flip-flops and chips use the rectangular symbols in both."><option value="ansi">ANSI (shapes)</option><option value="iec">IEC (boxes)</option></select></label><button id="lvTidy" title="Lay the drawing out again automatically (Undo brings your arrangement back in the designer)">Tidy up</button><span class="grow"></span><button id="lvPop" title="Open the logic view in a panel on the screen (L)">Open on the screen ⧉</button></nav>
   <div id="lvPane" class="pane">
     <div class="stage">
       <svg id="lvSvg" xmlns="http://www.w3.org/2000/svg"><g id="lvRoot"></g></svg>
@@ -2974,12 +2976,23 @@ function lvGraph() {
     if (d.gates) {
       d.gates.forEach((gt, k) => {
         if (![...gt.i, gt.o].some(p => conn(m.pt[p]))) return;
-        const type = d.type, nIn = gt.i.length, bub = INV_T.has(type) ? 8 : 0;
-        const BW = type === 'not' ? 30 : type === 'aoi' ? 52 : 46, Hh = type === 'not' ? 26 : Math.max(2, nIn) * 14 + 8;
-        const n = { id: `g${m.uid}.${k}`, kind: 'gate', m, type, BW, bub, Hh, title: `${m.type}·${k + 1}`, sub: `slot ${m.slot + 1}`,
+        const type = d.type, nIn = gt.i.length, { BW, Hh, bub } = lvGateGeom(type, nIn);
+        const n = { id: `g${m.uid}.${k}`, kind: 'gate', m, type, nIn, BW, bub, Hh, title: `${m.type}·${k + 1}`, sub: `slot ${m.slot + 1}`,
           act: `mod:${m.uid}`, tip: `${d.desc}, gate ${k + 1}. Click to find it on the bench.`, ins: [], outs: [], w: BW + bub + 30, h: Hh + 34 };
         gt.i.forEach((p, i) => addPin(n, m.pt[p], 'in', 0, 18 + Hh * (i + 1) / (nIn + 1), String(p), pd(p)));
         addPin(n, m.pt[gt.o], 'out', n.w, 18 + Hh / 2, String(gt.o), pd(gt.o));
+        nodes.push(n);
+      });
+    } else if (d.ffs) {
+      // each flip-flop is its own symbol: inputs ~S, D/J, C, K, ~R from the top, Q opposite D/J, ~Q opposite C/K
+      d.ffs.forEach((ff, k) => {
+        if (![...ff.ins, ...ff.outs].some(([p]) => conn(m.pt[p]))) return;
+        const ins = [...ff.ins].sort((x, y) => FF_ORDER[x[1]] - FF_ORDER[y[1]]), rows = ins.length, R = 18, top = 26;
+        const n = { id: `f${m.uid}.${k}`, kind: 'ff', m, clk: LV_BLOCK[m.type].clk, title: `${m.type}·${k + 1}`, sub: `slot ${m.slot + 1}`,
+          act: `mod:${m.uid}`, tip: `${d.desc}, flip-flop ${k + 1}. Unwired inputs float HIGH. Click to find it on the bench.`,
+          ins: [], outs: [], w: 104, h: top + rows * R + 26 };
+        ins.forEach(([p, r], i) => addPin(n, m.pt[p], 'in', 0, top + i * R + R / 2, r, pd(p)));
+        ff.outs.forEach(([p, r]) => addPin(n, m.pt[p], 'out', n.w, top + (r === 'Q' ? 1 : rows - 2) * R + R / 2, r, pd(p)));
         nodes.push(n);
       });
     } else {
@@ -2988,10 +3001,10 @@ function lvGraph() {
       for (const u of m.units) for (const t of u.outT) outs.push(+t.id.split('.')[1]);   // logical order: QA, QB, QC, QD…
       if (![...ins, ...outs].some(p => conn(m.pt[p]))) continue;
       const rows = Math.max(ins.length, outs.length), R = 16;
-      const n = { id: `b${m.uid}`, kind: 'block', m, title: m.type, sub: `${d.desc} · slot ${m.slot + 1}`, act: `mod:${m.uid}`,
+      const n = { id: `b${m.uid}`, kind: 'block', m, sym: LV_BLOCK[m.type] || { q: '' }, title: m.type, sub: `${d.desc} · slot ${m.slot + 1}`, act: `mod:${m.uid}`,
         tip: `${d.desc}. Unwired inputs float HIGH. Click to find it on the bench.`, ins: [], outs: [], w: 168, h: 40 + rows * R + 8 };
-      ins.forEach((p, i) => addPin(n, m.pt[p], 'in', 0, 40 + i * R + R / 2, d.names[p], pd(p)));
-      outs.forEach((p, i) => addPin(n, m.pt[p], 'out', n.w, 40 + i * R + R / 2, d.names[p], pd(p)));
+      ins.forEach((p, i) => addPin(n, m.pt[p], 'in', 0, 40 + i * R + R / 2, d.names[p], pd(p)).pin = p);
+      outs.forEach((p, i) => addPin(n, m.pt[p], 'out', n.w, 40 + i * R + R / 2, d.names[p], pd(p)).pin = p);
       nodes.push(n);
     }
   }
@@ -3065,20 +3078,82 @@ function lvLayout(nodes, edges) {
   return { W: x - GX + M0, H: H + 2 * M0 + 40, back };
 }
 
-function lvGateBody(n) {
-  const { type, BW, Hh, bub } = n; let s = '';
-  if (type === 'and' || type === 'nand') { const rx = Math.min(Hh / 2, BW * 0.62); s = `<path class="lv-body" d="M0,0 H${BW - rx} A${rx},${Hh / 2} 0 0 1 ${BW - rx},${Hh} H0 Z"/>`; }
-  else if (type === 'or' || type === 'nor' || type === 'xor') {
-    s = `<path class="lv-body" d="M0,0 Q${BW * 0.55},0 ${BW},${Hh / 2} Q${BW * 0.55},${Hh} 0,${Hh} Q${BW * 0.25},${Hh / 2} 0,0 Z"/>`;
-    if (type === 'xor') s += `<path class="lv-line" d="M-6,0 Q${BW * 0.25 - 6},${Hh / 2} -6,${Hh}"/>`;
+// ---- Logic symbols --------------------------------------------------------------------------------------------
+// Two standard sets, picked under "Symbols":
+//  'ansi' – IEEE Std 91 distinctive shapes (the D-shaped AND, the curved OR, the triangle NOT);
+//  'iec'  – IEC 60617-12 / PN-EN 60617-12 rectangles with a qualifying symbol: & (AND), ≥1 (OR), =1 (XOR), 1 (NOT).
+// Chips that are more than a gate use the rectangular IEEE 91 / IEC 60617-12 symbols in both sets: a box with its
+// qualifying symbol (Σ adder, SRG4 shift register, BCD/DEC decoder, DMUX demultiplexer), a negation circle on an
+// active-low pin and a small triangle (dynamic input) on a clock input, with a circle in front of it when the chip
+// acts on the falling edge. Each flip-flop of a 7474 / 7476 is drawn as its own symbol.
+const SYM = { std: 'ansi' };
+try { SYM.std = localStorage.getItem('unilog2.symbols') === 'iec' ? 'iec' : 'ansi'; } catch (_) {}
+const SYM_BODY = 40;   // height of a distinctive-shape gate body; more inputs extend its back with a straight line
+function lvGateGeom(type, nIn) {
+  const bub = INV_T.has(type) || type === 'xnor' ? 8 : 0, iec = SYM.std === 'iec';
+  if (type === 'not') return { BW: iec ? 30 : 30, Hh: iec ? 30 : 26, bub };
+  if (type === 'aoi') return { BW: 64, Hh: 64, bub };
+  return { BW: iec ? 34 : 44, Hh: Math.max(36, nIn * 14 + 8), bub };
+}
+// where the line of an input at height y (0…Hh) meets the gate body
+function lvBackX(type, BW, Hh, y) {
+  if (SYM.std === 'iec' || type === 'not' || type === 'aoi' || type === 'and' || type === 'nand') return 0;
+  const Hb = Math.min(Hh, SYM_BODY), y0 = (Hh - Hb) / 2, t = (y - y0) / Hb, sh = /^x/.test(type) ? -6 : 0;
+  return t <= 0 || t >= 1 ? sh : 2 * t * (1 - t) * BW * 0.28 + sh;
+}
+function lvAnsiBody(type, x, y0, BW, Hb) {
+  if (type === 'and' || type === 'nand') {
+    const r = Hb / 2, f = x + BW - r;
+    return `<path class="lv-body" d="M${x},${y0} H${f} A${r},${r} 0 0 1 ${f},${y0 + Hb} H${x} Z"/>`;
   }
-  else if (type === 'not') s = `<path class="lv-body" d="M0,0 L${BW},${Hh / 2} L0,${Hh} Z"/>`;
-  else s = `<rect class="lv-body" width="${BW}" height="${Hh}" rx="3"/><text class="lv-p" x="${BW / 2}" y="${Hh / 2 + 3}" text-anchor="middle">&amp;|≥1</text>`;
+  const m = y0 + Hb / 2, b = y0 + Hb;
+  let s = `<path class="lv-body" d="M${x},${y0} C${x + BW * 0.5},${y0} ${x + BW * 0.85},${y0 + Hb * 0.18} ${x + BW},${m} `
+    + `C${x + BW * 0.85},${y0 + Hb * 0.82} ${x + BW * 0.5},${b} ${x},${b} Q${x + BW * 0.28},${m} ${x},${y0} Z"/>`;
+  if (/^x/.test(type)) s += `<path class="lv-line" d="M${x - 6},${y0} Q${x + BW * 0.28 - 6},${m} ${x - 6},${b}"/>`;
+  return s;
+}
+function lvGateBody(n) {
+  const { type, BW, Hh, bub } = n, nIn = n.nIn || 2; let s = '';
+  const first = Hh / (nIn + 1), last = Hh * nIn / (nIn + 1);
+  if (SYM.std === 'iec') {
+    if (type === 'aoi') {   // two & boxes feeding a ≥1 box, output negated
+      s = `<rect class="lv-body" x="26" y="0" width="${BW - 26}" height="${Hh}"/><text class="lv-q" x="${26 + (BW - 26) / 2}" y="14" text-anchor="middle">≥1</text>`
+        + `<rect class="lv-body" x="0" y="0" width="26" height="${Hh / 2}"/><text class="lv-q" x="13" y="14" text-anchor="middle">&amp;</text>`
+        + `<rect class="lv-body" x="0" y="${Hh / 2}" width="26" height="${Hh / 2}"/><text class="lv-q" x="13" y="${Hh / 2 + 14}" text-anchor="middle">&amp;</text>`;
+    } else {
+      const q = { and: '&amp;', nand: '&amp;', or: '≥1', nor: '≥1', xor: '=1', xnor: '=1', not: '1' }[type] || '?';
+      s = `<rect class="lv-body" width="${BW}" height="${Hh}"/><text class="lv-q" x="${BW / 2}" y="14" text-anchor="middle">${q}</text>`;
+    }
+  } else if (type === 'not') s = `<path class="lv-body" d="M0,0 L${BW},${Hh / 2} L0,${Hh} Z"/>`;
+  else if (type === 'aoi') {   // two AND gates feeding a NOR
+    const aw = 24, ah = 26, a1 = 2, a2 = Hh - 2 - ah, nx = 34, nb = Hh - 12, n0 = 6;
+    s = lvAnsiBody('and', 0, a1, aw, ah) + lvAnsiBody('and', 0, a2, aw, ah) + lvAnsiBody('nor', nx, n0, BW - nx, nb);
+    const back = y => { const t = (y - n0) / nb; return nx + 2 * t * (1 - t) * (BW - nx) * 0.28; };
+    s += `<path class="lv-line" d="M${aw},${a1 + ah / 2} H${back(a1 + ah / 2)} M${aw},${a2 + ah / 2} H${back(a2 + ah / 2)}"/>`;
+  } else {
+    const Hb = Math.min(Hh, SYM_BODY), y0 = (Hh - Hb) / 2, sh = /^x/.test(type) ? -6 : 0;
+    s = lvAnsiBody(type, 0, y0, BW, Hb);
+    // inputs reaching past the body: the back is extended with a straight line (IEEE 91)
+    if (first < y0 || last > y0 + Hb) s += `<path class="lv-line" d="M${sh},${Math.min(first, y0)} V${y0} M${sh},${y0 + Hb} V${Math.max(last, y0 + Hb)}"/>`;
+  }
   if (bub) s += `<circle class="lv-body" cx="${BW + 4}" cy="${Hh / 2}" r="4"/>`;
   return s;
 }
+// Rectangular symbols for the chips that are more than gates: qualifying symbol, falling-edge clocks, active-low outputs.
+const LV_BLOCK = {
+  '7483': { q: 'Σ' },
+  '7495': { q: 'SRG4', clk: { 8: 'fall', 9: 'fall' } },
+  '7442': { q: 'BCD/DEC' },
+  '74155': { q: 'DMUX', lowOut: true },
+  '7474': { q: '', clk: 'rise' },
+  '7476': { q: '', clk: 'fall' },
+};
+// how a flip-flop pin is labelled in each standard; ~ marks an active-low pin (drawn with a negation circle)
+const FF_LABEL = { ansi: { D: 'D', J: 'J', K: 'K', C: '', '~S': 'PRE', '~R': 'CLR', Q: 'Q', '~Q': '~Q' },
+                   iec:  { D: '1D', J: '1J', K: '1K', C: 'C1', '~S': 'S', '~R': 'R', Q: 'Q', '~Q': '~Q' } };
+const FF_ORDER = { '~S': 0, D: 1, J: 1, C: 2, K: 3, '~R': 4 };
 // where you dragged parts of the wired diagram, by a key that survives reloading the bench (module slot, not its id)
-const lvKey = n => n.m ? (n.kind === 'gate' ? `g${n.m.slot}.${n.id.split('.')[1]}` : `b${n.m.slot}`) : n.id;
+const lvKey = n => n.m ? (n.kind === 'gate' || n.kind === 'ff' ? `${n.id[0]}${n.m.slot}.${n.id.split('.')[1]}` : `b${n.m.slot}`) : n.id;
 function lvSavePos() { try { localStorage.setItem('unilog2.diagram.v1', JSON.stringify(LV.pos)); } catch (_) {} }
 function lvBuild() {
   LV.dirty = false;
@@ -3113,19 +3188,49 @@ function lvBuild() {
       + `<g class="lv-v" transform="translate(${(p.x + x2) / 2},${p.y})" data-net="${p.term.net.id}"><rect x="-5" y="-6.5" width="10" height="13" rx="2"/><text y="3.3" text-anchor="middle"></text></g>`;
     if (n.kind === 'gate') {
       g += `<text class="lv-t" x="14" y="10">${esc(n.title)}</text><text class="lv-s" x="14" y="${n.Hh + 31}">${n.sub}</text>`;
-      const isOr = n.type === 'or' || n.type === 'nor' || n.type === 'xor';
       n.ins.forEach(p => {
-        const t = (p.y - 18) / n.Hh, bx = 14 + (isOr ? 2 * t * (1 - t) * n.BW * 0.25 : 0) - (n.type === 'xor' ? 6 : 0);
+        const bx = 14 + lvBackX(n.type, n.BW, n.Hh, p.y - 18);
         g += stub(p, bx) + `<text class="lv-s" x="2" y="${p.y - 3}">${p.label}</text>`;
       });
       const o = n.outs[0];
       g += stub(o, 14 + n.BW + n.bub) + `<text class="lv-s" x="${n.w - 2}" y="${o.y - 3}" text-anchor="end">${o.label}</text>`;
       g += `<g transform="translate(14,18)">${lvGateBody(n)}</g>`;
+    } else if (n.kind === 'ff') {
+      // flip-flop: IEEE 91 / IEC 60617-12 rectangle; ▷ = edge-triggered clock, ○ = active-low, ⌐ = postponed output (master-slave)
+      const iec = SYM.std === 'iec', L = FF_LABEL[SYM.std], x0 = 12, x1 = n.w - 12, pulse = n.clk === 'fall';
+      g += `<text class="lv-t" x="${x0}" y="10">${esc(n.title)}</text><text class="lv-s" x="${x0}" y="${n.h - 3}">${n.sub}</text>`;
+      g += `<rect class="lv-body" x="${x0}" y="16" width="${x1 - x0}" height="${n.h - 32}"/>`;
+      n.ins.forEach(p => {
+        const low = p.label[0] === '~' || (p.label === 'C' && pulse), clk = p.label === 'C';
+        g += stub(p, low ? x0 - 8 : x0) + (low ? `<circle class="lv-body" cx="${x0 - 4}" cy="${p.y}" r="4"/>` : '');
+        let tx = x0 + 4, lab = L[p.label];
+        if (clk && !pulse) { g += `<path class="lv-line" d="M${x0},${p.y - 5} L${x0 + 8},${p.y} L${x0},${p.y + 5}"/>`; tx = x0 + 11; }
+        if (clk && pulse) lab = iec ? 'C1' : 'CLK';
+        if (lab) g += `<text class="lv-p" x="${tx}" y="${p.y + 3.5}">${esc(lab)}</text>`;
+      });
+      n.outs.forEach(p => {
+        const inv = p.label === '~Q';
+        g += stub(p, iec && inv ? x1 + 8 : x1) + (iec && inv ? `<circle class="lv-body" cx="${x1 + 4}" cy="${p.y}" r="4"/>` : '');
+        const lab = (pulse ? '⌐' : '') + (iec ? '' : inv ? 'Q̄' : 'Q');
+        if (lab) g += `<text class="lv-p" x="${x1 - 4}" y="${p.y + 3.5}" text-anchor="end">${lab}</text>`;
+      });
     } else if (n.kind === 'block') {
-      g += `<rect class="lv-body" x="10" y="0" width="${n.w - 20}" height="${n.h}" rx="4"/>`;
-      g += `<text class="lv-t" x="${n.w / 2}" y="16" text-anchor="middle">${esc(n.title)}</text><text class="lv-s" x="${n.w / 2}" y="29" text-anchor="middle">${esc(n.sub.length > 30 ? n.sub.slice(0, 29) + '…' : n.sub)}</text>`;
-      n.ins.forEach(p => { g += stub(p, 10) + `<text class="lv-p" x="15" y="${p.y + 3.5}">${lvTxt(p.label)}</text>`; });
-      n.outs.forEach(p => { g += stub(p, n.w - 10) + `<text class="lv-p" x="${n.w - 15}" y="${p.y + 3.5}" text-anchor="end">${lvTxt(p.label)}</text>`; });
+      // chip: IEEE 91 / IEC 60617-12 rectangle with its qualifying symbol; ○ = active-low pin, ▷ = clock (○▷ = falling edge)
+      const sym = n.sym, x0 = 12, x1 = n.w - 12;
+      g += `<rect class="lv-body" x="${x0}" y="0" width="${x1 - x0}" height="${n.h}"/>`;
+      g += `<text class="lv-q" x="${n.w / 2}" y="16" text-anchor="middle">${esc(sym.q || n.title)}</text><text class="lv-s" x="${n.w / 2}" y="29" text-anchor="middle">${esc(n.title + ' · slot ' + (n.m.slot + 1))}</text>`;
+      const clean = l => l.replace('~', '');
+      n.ins.forEach(p => {
+        const ck = sym.clk && sym.clk[p.pin], low = p.label.includes('~') || ck === 'fall';
+        g += stub(p, low ? x0 - 8 : x0) + (low ? `<circle class="lv-body" cx="${x0 - 4}" cy="${p.y}" r="4"/>` : '');
+        if (ck) g += `<path class="lv-line" d="M${x0},${p.y - 5} L${x0 + 8},${p.y} L${x0},${p.y + 5}"/>`;
+        g += `<text class="lv-p" x="${x0 + (ck ? 11 : 4)}" y="${p.y + 3.5}">${esc(clean(p.label))}</text>`;
+      });
+      n.outs.forEach(p => {
+        const low = p.label.includes('~') || sym.lowOut;
+        g += stub(p, low ? x1 + 8 : x1) + (low ? `<circle class="lv-body" cx="${x1 + 4}" cy="${p.y}" r="4"/>` : '');
+        g += `<text class="lv-p" x="${x1 - 4}" y="${p.y + 3.5}" text-anchor="end">${esc(clean(p.label))}</text>`;
+      });
     } else if (n.kind === 'src') {
       g += `<rect class="lv-body" x="0" y="0" width="${n.w - 12}" height="${n.h}" rx="5"/>`;
       g += `<text class="lv-t" x="9" y="17"${n.isClk ? ' data-clk="1"' : ''}>${esc(n.title)}</text>`;
@@ -3244,8 +3349,7 @@ LV.mode = 'circuit';
 
 function dzGeom(n) {
   if (GATE_T.has(n.t)) {
-    const k = n.t === 'not' ? 1 : n.n, bub = /^(nand|nor|not|xnor)$/.test(n.t) ? 8 : 0;
-    const BW = n.t === 'not' ? 30 : 46, Hh = n.t === 'not' ? 26 : Math.max(2, k) * 14 + 8, w = BW + bub + 28;
+    const k = n.t === 'not' ? 1 : n.n, { BW, Hh, bub } = lvGateGeom(n.t, k), w = BW + bub + 28;
     return { w, h: Hh, BW, Hh, bub, ins: Array.from({ length: k }, (_, i) => ({ x: 0, y: Hh * (i + 1) / (k + 1) })), out: { x: w, y: Hh / 2 } };
   }
   if (n.t === 'led') return { w: 96, h: 30, ins: [{ x: 0, y: 15 }], out: null };
@@ -3361,10 +3465,9 @@ function dzRender(skipBar) {
     if (GATE_T.has(n.t)) {
       s += `<rect x="8" y="-4" width="${g.w - 16}" height="${g.h + 8}" fill="transparent"/>`;
       s += `<text class="lv-s" x="14" y="-7">${esc(n.name ? n.name : n.t.toUpperCase())}</text>`;
-      const isOr = /^(or|nor|xor|xnor)$/.test(n.t), isX = /^x/.test(n.t);
-      g.ins.forEach(p => { const t = p.y / g.Hh, bx = 14 + (isOr ? 2 * t * (1 - t) * g.BW * 0.25 : 0) - (isX ? 6 : 0); s += `<line class="lv-line" x1="0" y1="${p.y}" x2="${bx}" y2="${p.y}"/>`; });
+      g.ins.forEach(p => { const bx = 14 + lvBackX(n.t, g.BW, g.Hh, p.y); s += `<line class="lv-line" x1="0" y1="${p.y}" x2="${bx}" y2="${p.y}"/>`; });
       s += `<line class="lv-line" x1="${14 + g.BW + g.bub}" y1="${g.Hh / 2}" x2="${g.w}" y2="${g.Hh / 2}"/>`;
-      s += `<g transform="translate(14,0)">${lvGateBody({ type: isX ? 'xor' : n.t, BW: g.BW, Hh: g.Hh, bub: g.bub })}</g>`;
+      s += `<g transform="translate(14,0)">${lvGateBody({ type: n.t, nIn: g.ins.length, BW: g.BW, Hh: g.Hh, bub: g.bub })}</g>`;
     } else if (n.t === 'led') {
       s += `<rect class="lv-body" x="12" y="0" width="${g.w - 12}" height="${g.h}" rx="5"/><line class="lv-line" x1="0" y1="15" x2="12" y2="15"/>`;
       s += `<circle class="lv-led" cx="28" cy="15" r="7"${B && B.nodes[n.id] ? ` data-term="${B.nodes[n.id].term}"` : ''}/><text class="lv-t" x="42" y="13">${esc(n.name || 'LED')}</text>`;
@@ -4291,6 +4394,11 @@ $('#bTT').onclick = () => lvPanelToggle('tt');
 $('#lvPanel').addEventListener('pointerdown', () => { PAPER.focus = 'lvui'; });
 $('#dzFitB').onclick = dzFit;
 $('#lvLines').value = LINE.style;
+$('#lvSym').value = SYM.std;
+$('#lvSym').onchange = e => {
+  SYM.std = e.target.value; try { localStorage.setItem('unilog2.symbols', SYM.std); } catch (_) {}
+  dzRender(true); LV.dirty = true; lvFrame();
+};
 $('#lvLines').onchange = e => {
   LINE.style = e.target.value; try { localStorage.setItem('unilog2.lines', LINE.style); } catch (_) {}
   dzRender(true); LV.dirty = true; lvFrame();
