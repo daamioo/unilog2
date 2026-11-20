@@ -461,9 +461,10 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
   <div id="fsmPane" class="pane" hidden>
     <div class="dz-bar">
       <label>Type <select id="fsmType"><option value="moore">Moore (output in the state)</option><option value="mealy">Mealy (output on the arrow)</option></select></label>
-      <label>Inputs <select id="fsmNIn"><option>1</option><option>2</option><option>3</option></select></label>
+      <label>Inputs <select id="fsmNIn"><option>0</option><option>1</option><option>2</option><option>3</option></select></label>
       <label>Outputs <select id="fsmNOut"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
       <button id="fsmAdd">Add state</button><button id="fsmEx">Example</button><button id="fsmClear">Clear</button><button id="fsmFit">Fit</button>
+      <span class="lbl">Read from</span><button id="fsmFromDesign" title="Work out the state machine of the gate design (D flip-flops and gates)">Design</button><button id="fsmFromBench" title="Work out the state machine wired on the bench (7474s and gates)">Bench</button>
     </div>
     <div class="dz-bar dz-sel" id="fsmSel"></div>
     <div class="stage">
@@ -479,6 +480,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
         <option value="sop">AND–OR</option>
         <option value="pos">OR–AND</option>
       </select></label>
+      <label title="Try the possible state codes and keep the one that needs the fewest gates (the initial state stays 0…0)"><input type="checkbox" id="fsmEnc" checked> Choose state codes for the least logic</label>
       <button id="fsmMake" class="primary">Create circuit</button>
       <label><input type="checkbox" id="fsmBuild"> and build it on the bench</label>
       <span id="fsmMsg"></span>
@@ -3998,8 +4000,15 @@ function dzBuild(skipOpt, noSplit) {
   }
   // flip-flops: Q is the signal 'n<id>', ~Q is 'n<id>n'. A NOT on a Q is its ~Q pin instead (no inverter needed).
   const ffRec = dffs.map(n => ({ n, q: 'n' + n.id, qn: 'n' + n.id + 'n', d: inSig(n, 0), c: inSig(n, 1), r: inSig(n, 2) }));
-  const ffQ = new Map(ffRec.map(f => [f.q, f])), ffAlias = new Map();
-  for (let i = prims.length - 1; i >= 0; i--) { const p = prims[i]; if (p.t === 'not' && ffQ.has(p.ins[0])) { ffAlias.set(p.out, ffQ.get(p.ins[0]).qn); prims.splice(i, 1); } }
+  const invSig = new Map(ffRec.map(f => [f.q, f.qn])), ffAlias = new Map();
+  const INV_TERM = t => { let mm; return (mm = /^SW(\d)Q$/.exec(t)) ? `SW${mm[1]}N` : (mm = /^P(\d)$/.exec(t)) ? `P${mm[1]}N` : (mm = /^P(\d)N$/.exec(t)) ? `P${mm[1]}` : t === 'CLK' ? 'CLKN' : t === 'CLKN' ? 'CLK' : null; };
+  for (const [sg, t] of [...sigDrv]) {
+    const it = INV_TERM(t); if (!it) continue;
+    let is = termSig.get(it);
+    if (!is) { is = 'i' + sg; termSig.set(it, is); sigDrv.set(is, it); }
+    invSig.set(sg, is);
+  }
+  for (let i = prims.length - 1; i >= 0; i--) { const p = prims[i]; if (p.t === 'not' && invSig.has(p.ins[0])) { ffAlias.set(p.out, invSig.get(p.ins[0])); prims.splice(i, 1); } }
   if (ffAlias.size) {
     const al = x => ffAlias.get(x) || x;
     for (const p of prims) p.ins = p.ins.map(x => x == null ? x : al(x));
@@ -4115,8 +4124,8 @@ function dzBuild(skipOpt, noSplit) {
     addT(f.d, pin(P.d), false); addT(f.c, pin(P.c), false); addT(f.r || 'ONE', pin(P.r), false); addT('ONE', pin(P.p), false);
     addT(f.q, pin(P.q), true); sigTerm[f.q] = pin(P.q); addT(f.qn, pin(P.qn), true); sigTerm[f.qn] = pin(P.qn);
   });
-  for (const [a, b] of ffAlias) sigTerm[a] = sigTerm[b];
   for (const [s, t] of sigDrv) { addT(s, t, true); sigTerm[s] = t; }
+  for (const [a, b] of ffAlias) sigTerm[a] = sigTerm[b];
   for (const k of sinks) addT(k.sig, k.term, false);
   // cables
   const hdrs = new Map(); for (const h of H.values()) { if (!hdrs.has(h.term.id)) hdrs.set(h.term.id, []); hdrs.get(h.term.id).push(h); }
@@ -4701,7 +4710,7 @@ function ttExprRender() {
   ttExprPlain(style, pos);
 }
 function ttExprSmart() {
-  const r = ttSynthSmart();
+  const r = ttSynthBest();
   $('#ttExpr').innerHTML = r.exprs.map(e => `<div><b>${esc(e.name)}</b> = ${e.html}</div>`).join('')
     + `<div class="nt">${r.gates} gate${r.gates === 1 ? '' : 's'} in total${r.notes.length ? ' · ' + r.notes.map(esc).join(' · ') : ''}.</div>`
     + (TT.note ? `<div class="nt">${esc(TT.note)}</div>` : '');
@@ -4720,51 +4729,104 @@ function ttExprPlain(style, pos) {
 }
 $('#ttStyle').onchange = ttExprRender;
 
-// --- fill from the design (ideal logic; feedback loops are iterated row by row so latches keep their state)
-function designTable() {
-  const ins = D.nodes.filter(n => n.t === 'sw' || n.t === 'pulse').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y || a.x - b.x);
+// --- what a circuit does, worked out from its gate design (ideal logic; open inputs read HIGH, like TTL).
+// Without flip-flops: one row per combination of the switches and pulses; feedback loops are iterated row by row, so
+// latches keep their state. With D flip-flops: the table's inputs are the flip-flops' outputs Q (the state) and the
+// switches and pulses that aren't only a clock or a reset; its outputs are each flip-flop's D, the next state (Q+),
+// and the LEDs. That is the state table of the machine, which the State machine tab draws as a diagram.
+const GATE_FN = { and: v => +v.every(Boolean), or: v => +v.some(Boolean), nand: v => +!v.every(Boolean), nor: v => +!v.some(Boolean),
+  xor: v => v.reduce((a, b) => a ^ b, 0), xnor: v => 1 - v.reduce((a, b) => a ^ b, 0), not: v => 1 - v[0] };
+function circuitAnalyse(nodes, wires) {
+  const drv = new Map(wires.map(w => [w.to + ':' + w.port, w.from])), byId = new Map(nodes.map(n => [n.id, n]));
+  const outOf = new Map(); for (const w of wires) { if (!outOf.has(w.from)) outOf.set(w.from, []); outOf.get(w.from).push(w); }
+  const onlyInto = (id, port) => (outOf.get(id) || []).every(w => byId.get(w.to) && byId.get(w.to).t === 'dff' && w.port === port);
+  const ffs = nodes.filter(n => n.t === 'dff').sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true }) || a.y - b.y || a.x - b.x);
+  const clks = new Set(), rsts = new Set();
+  for (const f of ffs) { const c = drv.get(f.id + ':1'), r = drv.get(f.id + ':2'); if (c != null) clks.add(c); if (r != null) rsts.add(r); }
+  for (const c of clks) { const n = byId.get(c); if (!n || !/^(pulse|clk|sw)$/.test(n.t)) return { err: 'A flip-flop is clocked by another flip-flop or through gates (an asynchronous circuit, like a ripple counter). Only flip-flops that share one clock, straight from a pulse, the clock or a switch, can be worked out.' }; }
+  if (clks.size > 1) return { err: 'The flip-flops have different clocks, so they do not step together.' };
+  if (ffs.length && !clks.size) return { err: 'No flip-flop has a clock wired, so nothing ever changes.' };
+  const ins = nodes.filter(n => (n.t === 'sw' || n.t === 'pulse') && !(clks.has(n.id) && onlyInto(n.id, 1)) && !(rsts.has(n.id) && onlyInto(n.id, 2)))
+    .sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y || a.x - b.x);
   const outs = [];
-  for (const n of D.nodes.filter(n => n.t === 'led' || n.t === 'hex').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y)) {
+  for (const n of nodes.filter(n => n.t === 'led' || n.t === 'hex').sort((a, b) => (a.k || 99) - (b.k || 99) || a.y - b.y)) {
     if (n.t === 'led') outs.push({ n, port: 0, name: n.name || 'LED' }); else for (let i = 0; i < 4; i++) outs.push({ n, port: i, name: (n.name || 'HEX') + '.' + i });
   }
-  if (D.nodes.some(n => n.t === 'dff')) return { err: 'The design has flip-flops, so it is a state machine: its outputs depend on what happened before, not only on the inputs.' };
-  if (!ins.length) return { err: 'The design has no switches or pulses to use as inputs.' };
-  if (ins.length > 8) return { err: `The design has ${ins.length} inputs; the table handles up to 8.` };
-  if (!outs.length) return { err: 'The design has no LEDs or display to use as outputs.' };
-  if (outs.length > 8) outs.length = 8;
-  const drv = new Map(D.wires.map(w => [w.to + ':' + w.port, w.from]));
-  const gates = D.nodes.filter(n => GATE_T.has(n.t)).sort((a, b) => a.x - b.x);
-  const val = new Map(D.nodes.map(n => [n.id, n.t === 'one' ? 1 : 0]));
-  const inp = (n, i) => { const f = drv.get(n.id + ':' + i); return f == null ? 1 : val.get(f); };   // open inputs read HIGH, like TTL
-  const FN = { and: v => +v.every(Boolean), or: v => +v.some(Boolean), nand: v => +!v.every(Boolean), nor: v => +!v.some(Boolean), xor: v => v.reduce((a, b) => a ^ b, 0), xnor: v => 1 - v.reduce((a, b) => a ^ b, 0), not: v => 1 - v[0] };
-  const nIn = ins.length, rows = 1 << nIn, out = [];
-  let unstable = false;
-  for (let r = 0; r < rows; r++) {
-    ins.forEach((n, i) => val.set(n.id, r >> (nIn - 1 - i) & 1));
-    let ok = false;
-    for (let pass = 0; pass < 64 && !ok; pass++) {
-      ok = true;
-      for (const g of gates) { const k = g.t === 'not' ? 1 : g.n, v = FN[g.t](Array.from({ length: k }, (_, i) => inp(g, i))); if (v !== val.get(g.id)) { val.set(g.id, v); ok = false; } }
+  const k = ffs.length, nIn = ins.length;
+  if (!k && !nIn) return { err: 'The design has no switches or pulses to use as inputs.' };
+  if (!k && !outs.length) return { err: 'The design has no LEDs or display to use as outputs.' };
+  if (k > 6 || k + nIn > 8) return { err: `The design has ${k} flip-flop${k === 1 ? '' : 's'} and ${nIn} input${nIn === 1 ? '' : 's'}; the table handles 8 columns of inputs and state at most.` };
+  if (outs.length + k > 8) outs.length = Math.max(0, 8 - k);
+  // parts that aren't inputs sit at rest: a pulse not pressed, the clock low
+  const rest = n => n.t === 'one' ? 1 : (n.t === 'pulse' || n.t === 'clk') ? (n.low ? 1 : 0) : 0;
+  const gates = nodes.filter(n => GATE_T.has(n.t)).sort((a, b) => a.x - b.x);
+  const val = new Map(nodes.map(n => [n.id, rest(n)]));
+  const inp = (n, i) => { const f = drv.get(n.id + ':' + i); return f == null ? 1 : val.get(f); };
+  const settle = () => {
+    for (let pass = 0; pass < 64; pass++) {
+      let ok = true;
+      for (const g of gates) { const v = GATE_FN[g.t](Array.from({ length: g.t === 'not' ? 1 : g.n }, (_, i) => inp(g, i))); if (v !== val.get(g.id)) { val.set(g.id, v); ok = false; } }
+      if (ok) return true;
     }
-    if (!ok) unstable = true;
-    out.push(outs.map(o => { const f = drv.get(o.n.id + ':' + o.port); return !ok ? 2 : f == null ? 0 : val.get(f); }));
+    return false;
+  };
+  const n = k + nIn, out = []; let unstable = false;
+  for (let r = 0; r < 1 << n; r++) {
+    ffs.forEach((f, i) => val.set(f.id, r >> (n - 1 - i) & 1));
+    ins.forEach((nd, i) => val.set(nd.id, r >> (nIn - 1 - i) & 1));
+    const ok = settle(); if (!ok) unstable = true;
+    const row = ffs.map(f => ok ? inp(f, 0) : 2);
+    for (const o of outs) { const f = drv.get(o.n.id + ':' + o.port); row.push(!ok ? 2 : f == null ? 0 : val.get(f)); }
+    out.push(row);
   }
-  // feedback check (any cycle in the gate graph)
-  const succ = new Map(); for (const w of D.wires) { if (!succ.has(w.from)) succ.set(w.from, []); succ.get(w.from).push(w.to); }
+  // feedback among the gates themselves (a latch); wires into flip-flops are the normal feedback of a state machine
+  const succ = new Map(); for (const w of wires) { if (byId.get(w.to) && byId.get(w.to).t === 'dff') continue; if (!succ.has(w.from)) succ.set(w.from, []); succ.get(w.from).push(w.to); }
   const st = new Map(); let cyc = false;
   const dfs = id => { st.set(id, 1); for (const s of succ.get(id) || []) { if (st.get(s) === 1) cyc = true; else if (!st.has(s)) dfs(s); } st.set(id, 2); };
-  D.nodes.forEach(n => { if (!st.has(n.id)) dfs(n.id); });
-  return { n: nIn, m: outs.length, inN: ins.map((n, i) => n.name || ABC[i]), outN: outs.map(o => o.name), out,
-    note: ((cyc ? 'The design has feedback, so it has memory: each row follows on from the one above it. ' : '') + (unstable ? 'Rows marked X never settled (the circuit oscillates).' : '')).trim() };
+  nodes.forEach(nd => { if (!st.has(nd.id)) dfs(nd.id); });
+  const short = (s, d) => s && s.length <= 6 ? s : d;
+  const ffNames = ffs.map((f, i) => short(f.name, 'Q' + (i + 1))), inNames = ins.map((nd, i) => short(nd.name, ABC[i])), outNames = outs.map((o, j) => short(o.name, 'Y' + (j + 1)));
+  const notes = [];
+  if (k) notes.push(`A state machine: the first ${k} column${k === 1 ? ' is' : 's are'} the flip-flop state (${ffNames.join(', ')}), and the columns marked + are the next state each clock pulse loads.`);
+  if (cyc) notes.push('The gates have feedback of their own, so they have memory: each row follows on from the one above it.');
+  if (unstable) notes.push('Rows marked X never settled (the circuit oscillates).');
+  return { k, nIn, ffs, ins, outs, ffNames, inNames, outNames,
+    resetCode: k && ffs.every(f => drv.has(f.id + ':2')) ? 0 : null,
+    tbl: { n, m: k + outs.length, inN: [...ffNames, ...inNames], outN: [...ffNames.map(s => s + '+'), ...outNames], out, note: notes.join(' ') } };
+}
+function designTable(nodes = D.nodes, wires = D.wires) {
+  const a = circuitAnalyse(nodes, wires);
+  return a.err ? { err: a.err } : a.tbl;
+}
+// the design drawn from the bench, worked out the same way (null when the bench has chips the designer can't draw)
+function benchAnalyse() {
+  if (!wires.length) return { err: 'Nothing is wired on the bench yet.' };
+  const bd = benchDesign();
+  if (bd.odd) return { odd: bd.odd };
+  const a = circuitAnalyse(bd.nodes, bd.wires);
+  if (!a.err) {
+    const dead = modules.filter(m => !m.def.passive && wires.some(w => wireTouches(w, m)) && !m.powered).map(m => `${m.type} in slot ${m.slot + 1}`);
+    if (dead.length) a.tbl.note = (a.tbl.note + ` On the bench ${dead.join(', ')} ${dead.length === 1 ? 'has' : 'have'} no power yet, so ${dead.length === 1 ? 'its' : 'their'} outputs are dead until ${dead.length === 1 ? 'it is' : 'they are'} wired to +5V and 0V.`).trim();
+  }
+  return a;
 }
 function ttFromDesign() {
   const t = designTable(); if (t.err) return ttMsg(t.err, true);
+  if (t.n > 8) return ttMsg('The table handles 8 input columns at most.', true);
   const nIn = t.n, outs = t.outN;
   Object.assign(TT, { n: t.n, m: t.m, inN: t.inN, outN: t.outN, out: t.out, note: t.note });
   ttRender(); ttSave(); ttMsg(`Filled from the design: ${nIn} input${nIn === 1 ? '' : 's'}, ${outs.length} output${outs.length === 1 ? '' : 's'}.`);
 }
 // --- fill from the bench: step through every combination of the wired switches/pulses and read the LEDs
 function ttFromBench(quiet) {
+  const a = benchAnalyse();
+  if (!a.odd && !a.err) {
+    Object.assign(TT, a.tbl); TT.note = ('Worked out from the wiring (every module as ideal logic). ' + a.tbl.note).trim();
+    ttRender(); ttSave();
+    ttMsg(quiet ? 'Worked out from the bench: it is worked out again whenever the wiring changes.' : `Worked out from the bench: ${a.tbl.n} input column${a.tbl.n === 1 ? '' : 's'}, ${a.tbl.m} output${a.tbl.m === 1 ? '' : 's'}.`);
+    return;
+  }
+  if (a.err && !a.odd && /flip-flop/.test(a.err) && !quiet) ttMsg(a.err + ' Measuring the bench instead.', true);
   const conn = id => T.get(id).net.terms.length > 1;
   const ins = [];
   for (let k = 1; k <= 8; k++) if (conn(`SW${k}Q`) || conn(`SW${k}N`)) ins.push({ kind: 'sw', i: k - 1, name: 'SW' + k });
@@ -4799,7 +4861,7 @@ $('#ttCopy').onclick = () => {
 // --- synthesis: table -> gate design in the chosen style
 function ttSynth() {
   const style = $('#ttStyle').value, pos = style === 'pos' || style === 'nor', inv = style === 'nand' || style === 'nor';
-  if (style === 'smart') return ttSynthSmart();
+  if (style === 'smart') return ttSynthBest();
   const inner = { sop: 'and', nand: 'nand', pos: 'or', nor: 'nor' }[style], outer = { sop: 'or', nand: 'nand', pos: 'and', nor: 'nor' }[style];
   const sol = ttSolve(pos), n = TT.n;
   const nodes = [], wires = []; let id = 1;
@@ -4847,6 +4909,27 @@ function ttSynth() {
   gates = nodes.filter(nd => GATE_T.has(nd.t)).length;
   return { nodes, wires, seq: id, gates };
 }
+// The smart synthesis builds the outputs one after another and reuses what earlier ones built, so the order matters:
+// every order is tried for up to 4 outputs (a few for more), within a time budget, and the cheapest design kept.
+function ttSynthBest() {
+  const m = TT.m, t0 = performance.now(), id = [...Array(m).keys()];
+  let best = ttSynthSmart(id), bc = desCost(best);
+  if (m < 2) return best;
+  const orders = [];
+  const perm = (a, l) => { if (l === a.length) { orders.push(a.slice()); return; } for (let i = l; i < a.length; i++) { [a[l], a[i]] = [a[i], a[l]]; perm(a, l + 1); [a[l], a[i]] = [a[i], a[l]]; } };
+  if (m <= 4) perm(id.slice(), 0);
+  else {
+    const ones = j => TT.out.reduce((c, row) => c + (row[j] === 1), 0);
+    orders.push(id.slice().reverse(), id.slice().sort((a, b) => ones(a) - ones(b)), id.slice().sort((a, b) => ones(b) - ones(a)));
+  }
+  for (const o of orders) {
+    if (performance.now() - t0 > 400) break;
+    if (o.every((v, i) => v === i)) continue;
+    const d = ttSynthSmart(o), c = desCost(d);
+    if (c < bc - 1e-9) { best = d; bc = c; }
+  }
+  return best;
+}
 /* ---------- "Smart" synthesis: design the way a person does at the bench ----------
    Each output, in table order, takes the cheapest of:
      1. a short exact search (up to 3 gates) over the inputs, their inverses and everything already built,
@@ -4855,7 +4938,7 @@ function ttSynth() {
         reusing XORs that earlier outputs already built (Gray code cascades, B1 = B2 ⊕ G1);
      3. minimised NAND–NAND (sum of products) or NOR–NOR (product of sums), sharing inverters and terms.
    Truth tables are bit vectors (one bit per row), so every built signal can be reused exactly. */
-function ttSynthSmart() {
+function ttSynthSmart(order) {
   const n = TT.n, R = 1 << n, FULL = (1n << BigInt(R)) - 1n;
   const inVec = i => { let v = 0n; for (let r = 0; r < R; r++) if (r >> (n - 1 - i) & 1) v |= 1n << BigInt(r); return v; };
   const nodes = [], wires = []; let id = 1;
@@ -4863,7 +4946,7 @@ function ttSynthSmart() {
   const wire = (from, to, port) => wires.push({ from: from.id, to: to.id, port });
   const byVec = new Map(), K = v => v.toString(36);
   const reg = (vec, node, extra = {}) => { const e = Object.assign({ node, vec }, extra); byVec.set(K(vec), e); return e; };
-  const inputs = TT.inN.map((nm, i) => { const v = inVec(i); return reg(v, add('sw', { name: nm, k: i + 1 }), { name: nm, pmask: 1 << (n - 1 - i) }); });
+  const inputs = TT.inN.map((nm, i) => { const v = inVec(i); return reg(v, add('sw', { name: nm, k: i + 1 }), { name: nm, pmask: 1 << (n - 1 - i), isIn: true }); });
   const konst = b => ({ vec: b ? FULL : 0n, cost: 0, konst: b });     // the H / 0V node is only created if it ends up used
   const leaf = e => ({ vec: e.vec, cost: 0, entry: e });
   const RED = { and: (a, b) => a & b, nand: (a, b) => a & b, or: (a, b) => a | b, nor: (a, b) => a | b, xor: (a, b) => a ^ b, xnor: (a, b) => a ^ b };
@@ -4881,7 +4964,9 @@ function ttSynthSmart() {
     if (INV[op]) v = FULL ^ v;
     const have = byVec.get(K(v));
     if (have) return leaf(have);                                   // already built: free
-    return Object.assign({ vec: v, op, args, cost: W[op] + args.reduce((s, a) => s + a.cost, 0) }, extra || {});
+    // an inverted input costs nothing: the switches have Q̄ outputs, the pulses ⊔, the flip-flops ~Q
+    const own = op === 'not' && args[0].entry && args[0].entry.isIn ? 0 : W[op];
+    return Object.assign({ vec: v, op, args, cost: own + args.reduce((s, a) => s + a.cost, 0) }, extra || {});
   };
   const build = e => {
     if (e.entry) return e.entry.node;
@@ -4959,7 +5044,7 @@ function ttSynthSmart() {
     return best && best.cost < 4.5 ? best : null;
   };
   const leds = [];
-  for (let j = 0; j < TT.m; j++) {
+  for (const j of order || [...Array(TT.m).keys()]) {
     let target = 0n, care = 0n;
     TT.out.forEach((row, r) => { const b = 1n << BigInt(r); if (row[j] !== 2) care |= b; if (row[j] === 1) target |= b; });
     const cands = [];
@@ -4974,9 +5059,10 @@ function ttSynthSmart() {
     const en = byVec.get(K(pick.e.vec));
     const shown = html(pick.e, true);
     if (en && !en.name) en.name = TT.outN[j];
-    exprs.push({ name: TT.outN[j], html: shown });
+    exprs.push({ name: TT.outN[j], html: shown, j });
     leds.push([node, j]);
   }
+  exprs.sort((a, b) => a.j - b.j); leds.sort((a, b) => a[1] - b[1]);
   for (const [node, j] of leds) { const led = add('led', { name: TT.outN[j], k: j + 1 }); wire(node, led, 0); }
   // drop gates nobody uses (search can leave none, but keep it tidy) and lay the design out in columns
   dzAutoLayout(nodes, wires);
@@ -5203,7 +5289,7 @@ try { dzLoad(JSON.parse(localStorage.getItem('unilog2.design.v1') || 'null')); D
 const FSM = { type: 'moore', nIn: 1, nOut: 1, states: [], seq: 1, tab: 'tt', view: { x: 0, y: 0, k: 1 }, autoFit: true, sel: null, drag: null, live: null };
 const FSM_R = 26;
 const fsmCodes = () => 1 << FSM.nIn;
-const fsmCodeStr = c => c.toString(2).padStart(FSM.nIn, '0');
+const fsmCodeStr = c => FSM.nIn ? c.toString(2).padStart(FSM.nIn, '0') : '';
 // output bits as typed: 0, 1, or - / x for "don't care"; padded with 0 to the number of outputs
 const fsmBits = (s, m) => (String(s || '').toLowerCase().replace(/x/g, '-').replace(/[^01-]/g, '') + '0'.repeat(m)).slice(0, m);
 function fsmSave() { try { localStorage.setItem('unilog2.fsm.v1', JSON.stringify({ type: FSM.type, nIn: FSM.nIn, nOut: FSM.nOut, states: FSM.states, seq: FSM.seq })); } catch (_) {} }
@@ -5313,7 +5399,7 @@ function fsmSelBar() {
   let h = `<b>${esc(a.name)} → ${esc(b.name)}</b><span>on input</span>`;
   for (let c = 0; c < nX; c++) {
     const other = a.next[c] != null && a.next[c] !== b.id ? fsmById(a.next[c]) : null;
-    h += `<label title="${other ? 'Now goes to ' + esc(other.name) + '; ticking it moves the arrow here' : ''}"><input type="checkbox" data-c="${c}"${a.next[c] === b.id ? ' checked' : ''}> ${fsmCodeStr(c)}${other ? '*' : ''}`
+    h += `<label title="${other ? 'Now goes to ' + esc(other.name) + '; ticking it moves the arrow here' : ''}"><input type="checkbox" data-c="${c}"${a.next[c] === b.id ? ' checked' : ''}> ${fsmCodeStr(c) || 'every clock'}${other ? '*' : ''}`
       + (mealy ? ` / <input type="text" data-mo="${c}" maxlength="${m}" value="${esc(a.mo[c])}" style="width:${26 + m * 9}px" title="output on this arrow">` : '') + '</label>';
   }
   h += '<button id="fsmDel">Delete arrow</button>';
@@ -5385,7 +5471,7 @@ function fsmCompile() {
     live.forEach(s => { const g = blk.get(s.id) + ':' + s.next.map(t => t == null ? '?' : blk.get(t)).join(','); if (!ns.has(g)) ns.set(g, ns.size); nb.set(s.id, ns.get(g)); });
     const same = ns.size === sigs.size; blk = nb; sigs = ns; if (same) break;
   }
-  // classes in drawing order, the initial state's first (code 0)
+  // classes in drawing order, the initial state's first (it always gets the code 0…0, which RESET loads)
   const cls = [], clsOf = new Map();
   live.forEach(s => { const b = blk.get(s.id); if (!clsOf.has(b)) { clsOf.set(b, cls.length); cls.push({ rep: s, members: [] }); } cls[clsOf.get(b)].members.push(s); });
   const N = cls.length, k = Math.max(1, Math.ceil(Math.log2(N)));
@@ -5393,17 +5479,92 @@ function fsmCompile() {
   if (FSM.nIn + k > 8) return { err: 'Too many state bits and inputs together (8 at most).' };
   const cOf = s => clsOf.get(blk.get(s.id));
   const nextC = (ci, x) => { const t = cls[ci].rep.next[x]; return t == null ? null : cOf(byId.get(t)); };
-  const n = k + FSM.nIn, rows = 1 << n, out = [];
-  const bit = ch => ch === '1' ? 1 : ch === '0' ? 0 : 2;
-  for (let r = 0; r < rows; r++) {
-    const q = r >> FSM.nIn, x = r & (nX - 1), row = [];
-    const nc = q < N ? nextC(q, x) : null;
-    for (let j = 0; j < k; j++) row.push(nc == null ? 2 : nc >> (k - 1 - j) & 1);
-    for (let j = 0; j < m; j++) row.push(q >= N ? 2 : mealy ? (nc == null ? 2 : bit(cls[q].rep.mo[x][j])) : bit(cls[q].rep.out[j]));
-    out.push(row);
-  }
+  const n = k + FSM.nIn, bit = ch => ch === '1' ? 1 : ch === '0' ? 0 : 2;
   const Q = Array.from({ length: k }, (_, j) => 'Q' + (j + 1)), X = Array.from({ length: FSM.nIn }, (_, j) => 'x' + (j + 1)), Y = Array.from({ length: m }, (_, j) => 'y' + (j + 1));
-  return { k, N, cls, dropped, nextC, tbl: { n, m: k + m, inN: [...Q, ...X], outN: [...Q.map(q => 'D' + q.slice(1)), ...Y], out, note: '' } };
+  // the truth table for one choice of codes: enc[class] = its code; codes no state uses are don't-cares
+  const tblFor = enc => {
+    const back = new Map(enc.map((code, ci) => [code, ci])), out = [];
+    for (let r = 0; r < 1 << n; r++) {
+      const q = r >> FSM.nIn, x = r & (nX - 1), ci = back.has(q) ? back.get(q) : null, row = [];
+      const nc = ci == null ? null : nextC(ci, x);
+      for (let j = 0; j < k; j++) row.push(nc == null ? 2 : enc[nc] >> (k - 1 - j) & 1);
+      for (let j = 0; j < m; j++) row.push(ci == null ? 2 : mealy ? (nc == null ? 2 : bit(cls[ci].rep.mo[x][j])) : bit(cls[ci].rep.out[j]));
+      out.push(row);
+    }
+    return { n, m: k + m, inN: [...Q, ...X], outN: [...Q.map(q => 'D' + q.slice(1)), ...Y], out, note: '' };
+  };
+  return { k, N, cls, dropped, nextC, tblFor, ident: cls.map((_, i) => i) };
+}
+// A quick estimate of the logic a table needs: the minimised sum of products of every output, a gate per term of two
+// or more literals (with an input per literal) and an outer gate per output with more than one term. Single literals
+// are almost free: every input also has its inverse (the switches' Q̄, the flip-flops' ~Q).
+function tblCost(t) {
+  let c = 0;
+  for (let j = 0; j < t.m; j++) {
+    const ones = [], dcs = [];
+    t.out.forEach((row, r) => { if (row[j] === 1) ones.push(r); else if (row[j] === 2) dcs.push(r); });
+    const imps = qmMinimise(t.n, ones, dcs);
+    for (const p of imps) { const L = t.n - popc(p.d); c += L > 1 ? L + 1 : L === 1 ? 0.3 : 0; }
+    if (imps.length > 1) c += imps.length + 1;
+  }
+  return c;
+}
+// State assignment: every way of giving the states codes when there are few of them, otherwise a local search (swap two
+// codes, or move a state to an unused code) for as long as the time budget allows. Returns them cheapest first.
+function fsmSearchEnc(c, ms) {
+  const { k, N } = c, C = 1 << k, t0 = performance.now(), seen = new Map();
+  const cost = enc => { const key = enc.join(','); if (!seen.has(key)) seen.set(key, tblCost(c.tblFor(enc))); return seen.get(key); };
+  cost(c.ident);
+  let total = 1; for (let i = 0; i < N - 1; i++) total *= C - 1 - i;
+  if (N > 2 && total <= 840) {
+    const rec = (enc, used) => {
+      if (performance.now() - t0 > ms) return;
+      if (enc.length === N) { cost(enc); return; }
+      for (let code = 1; code < C; code++) if (!used.has(code)) { used.add(code); enc.push(code); rec(enc, used); enc.pop(); used.delete(code); }
+    };
+    rec([0], new Set([0]));
+  } else if (N > 2) {
+    let cur = c.ident.slice(), cc = cost(cur);
+    while (performance.now() - t0 < ms) {
+      const e = cur.slice(), i = 1 + Math.floor(Math.random() * (N - 1)), free = [];
+      for (let code = 1; code < C; code++) if (!e.includes(code)) free.push(code);
+      if (free.length && Math.random() < 0.3) e[i] = free[Math.floor(Math.random() * free.length)];
+      else { const j = 1 + Math.floor(Math.random() * (N - 1)); [e[i], e[j]] = [e[j], e[i]]; }
+      const ec = cost(e);
+      if (ec <= cc || Math.random() < 0.03) { cur = e; cc = ec; }
+    }
+  }
+  return [...seen.entries()].map(([key, v]) => ({ enc: key.split(',').map(Number), cost: v })).sort((a, b) => a.cost - b.cost);
+}
+// what a synthesised design costs on the lab case: gates, with AND/OR/XNOR at two (no such chips), NANDs over 4 inputs
+// at two, and NOTs on inputs free (they are the inverted outputs of the switches, pulses and flip-flops)
+function desCost(des) {
+  const by = new Map(des.nodes.map(n => [n.id, n])), src = new Map(des.wires.map(w => [w.to + ':' + w.port, w.from]));
+  let c = 0;
+  for (const n of des.nodes) {
+    if (!GATE_T.has(n.t)) continue;
+    if (n.t === 'not') { const f = by.get(src.get(n.id + ':0')); if (f && /^(sw|dff|pulse|clk)$/.test(f.t)) continue; }
+    c += n.t === 'and' || n.t === 'or' || n.t === 'xnor' || (n.n || 2) > 4 ? 2 : 1;
+  }
+  return c + des.wires.length * 0.01;
+}
+const fsmSig = () => JSON.stringify([FSM.type, FSM.nIn, FSM.nOut, FSM.states.map(s => [s.id, s.out, s.next, s.mo])]);
+// the codes to use: the quick estimate for the table below the drawing; for Create circuit, the best few by the
+// estimate are synthesised for real (in the chosen style) and the one with the fewest gates wins
+function fsmChooseEnc(c, deep) {
+  if (!$('#fsmEnc').checked) return { enc: c.ident, how: 'in drawing order' };
+  const base = fsmSig(), style = $('#fsmStyle').value, ch = FSM.encCache;
+  if (ch && ch.base === base && (!deep || ch.style === style)) return ch;
+  const list = fsmSearchEnc(c, deep ? 700 : 160);
+  let best = { enc: list[0].enc, how: 'chosen for the least logic' };
+  if (deep) {
+    const cands = list.slice(0, 6).map(x => x.enc);
+    if (!cands.some(e => e.join() === c.ident.join())) cands.push(c.ident);
+    let bc = Infinity;
+    for (const enc of cands) { const sc = desCost(withTT(c.tblFor(enc), style, ttSynth)); if (sc < bc - 1e-9) { bc = sc; best = { enc, how: 'chosen for the fewest gates' }; } }
+  }
+  FSM.encCache = Object.assign(best, { base, style: deep ? style : null });
+  return FSM.encCache;
 }
 // run a truth-table function on another table (and style), then put the sheet's own table back
 function withTT(tbl, style, fn) {
@@ -5411,34 +5572,35 @@ function withTT(tbl, style, fn) {
   Object.assign(TT, tbl); if (style) sel.value = style;
   try { return fn(); } finally { Object.assign(TT, save); sel.value = old; }
 }
-const fsmCodeOf = (ci, k) => ci.toString(2).padStart(k, '0');
+const fsmCodeOf = (code, k) => code.toString(2).padStart(k, '0');
 let fsmInfoTimer = 0;
-function fsmInfoSoon() { clearTimeout(fsmInfoTimer); fsmInfoTimer = setTimeout(fsmInfo, 120); }
+function fsmInfoSoon() { clearTimeout(fsmInfoTimer); fsmInfoTimer = setTimeout(fsmInfo, 150); }
 function fsmInfo() {
   const box = $('#fsmInfo'), c = fsmCompile();
   if (c.err) { box.innerHTML = `<div class="nt">${esc(c.err)}</div>`; return; }
-  const mealy = FSM.type === 'mealy', nX = fsmCodes();
+  const mealy = FSM.type === 'mealy', nX = fsmCodes(), ch = fsmChooseEnc(c, false), enc = ch.enc;
   const notes = [];
   if (c.dropped.length) notes.push(`Unreachable, left out: ${c.dropped.map(esc).join(', ')}.`);
   const merged = c.cls.filter(g => g.members.length > 1);
   if (merged.length) notes.push(`Equivalent, merged: ${merged.map(g => g.members.map(s => esc(s.name)).join(' = ')).join('; ')}.`);
   if (!notes.length) notes.push('The machine is already minimal.');
-  let h = `<div class="nt">${notes.join(' ')} ${c.N} state${c.N === 1 ? '' : 's'} → ${c.k} flip-flop${c.k === 1 ? '' : 's'} (7474 × ${Math.ceil(c.k / 2)}).</div>`;
-  h += '<table class="fsm-tab"><tr><th>state</th><th>Q</th>' + Array.from({ length: nX }, (_, x) => `<th>x=${fsmCodeStr(x)}</th>`).join('') + (mealy ? '' : '<th>y</th>') + '</tr>';
+  let h = `<div class="nt">${notes.join(' ')} ${c.N} state${c.N === 1 ? '' : 's'} → ${c.k} flip-flop${c.k === 1 ? '' : 's'} (7474 × ${Math.ceil(c.k / 2)}). Codes ${esc(ch.how)}.</div>`;
+  h += '<table class="fsm-tab"><tr><th>state</th><th>Q</th>' + Array.from({ length: nX }, (_, x) => `<th>${FSM.nIn ? 'x=' + fsmCodeStr(x) : 'next'}</th>`).join('') + (mealy ? '' : '<th>y</th>') + '</tr>';
   c.cls.forEach((g, ci) => {
-    h += `<tr><td>${esc(g.members.map(s => s.name).join('='))}</td><td>${fsmCodeOf(ci, c.k)}</td>`;
+    h += `<tr><td>${esc(g.members.map(s => s.name).join('='))}</td><td>${fsmCodeOf(enc[ci], c.k)}</td>`;
     for (let x = 0; x < nX; x++) { const nc = c.nextC(ci, x); h += `<td>${nc == null ? '–' : esc(c.cls[nc].rep.name)}${mealy ? ' / ' + (nc == null ? '–' : esc(g.rep.mo[x])) : ''}</td>`; }
     h += (mealy ? '' : `<td>${esc(g.rep.out)}</td>`) + '</tr>';
   });
   h += '</table>';
-  h += withTT(c.tbl, null, () => ttSolve(false).map((s, j) => `<div><b>${esc(TT.outN[j])}</b> = ${s.konst != null ? s.konst : s.terms.map(t => t.map(litHTML).join('·')).join(' + ')}</div>`).join(''));
+  h += withTT(c.tblFor(enc), null, () => ttSolve(false).map((s, j) => `<div><b>${esc(TT.outN[j])}</b> = ${s.konst != null ? s.konst : s.terms.map(t => t.map(litHTML).join('·')).join(' + ')}</div>`).join(''));
   box.innerHTML = h;
 }
 // ---- the circuit: synthesise the table, then the state-bit inputs become flip-flops and the D outputs their inputs
 function fsmMake() {
   const c = fsmCompile(); if (c.err) return fsmMsg(c.err, true);
-  if (FSM.nOut > 16) return fsmMsg('The display register has 16 LEDs.', true);
-  const des = withTT(c.tbl, $('#fsmStyle').value, ttSynth), k = c.k, ffs = [];
+  fsmMsg('Choosing the state codes…');
+  const ch = fsmChooseEnc(c, true), enc = ch.enc;
+  const des = withTT(c.tblFor(enc), $('#fsmStyle').value, ttSynth), k = c.k, ffs = [];
   for (const n of des.nodes) {
     if (n.t === 'sw' && n.k <= k) { ffs[n.k - 1] = n; n.t = 'dff'; n.name = 'Q' + n.k; delete n.k; }
     else if (n.t === 'sw') n.k -= k;
@@ -5457,11 +5619,44 @@ function fsmMake() {
   dzAutoLayout(des.nodes, des.wires);
   dzPush(); dzLoad(des); DZ.sel = null; D.changed = true; dzSave();
   lvMode('design'); dzRender(); requestAnimationFrame(dzFit);
-  FSM.live = { ffs: ffs.map(f => f.id), names: c.cls.map(g => g.members.map(s => s.id)) };
+  const names = []; c.cls.forEach((g, ci) => names[enc[ci]] = g.members.map(s => s.id));
+  FSM.live = { ffs: ffs.map(f => f.id), names };
+  fsmInfo();
   const gates = des.nodes.filter(n => GATE_T.has(n.t)).length;
-  const msg = `Circuit created: ${k} D flip-flop${k === 1 ? '' : 's'} and ${gates} gate${gates === 1 ? '' : 's'}. Pulse 1 = CLK, pulse 2 = RESET (to the initial state), switches 1–${FSM.nIn} = x, LEDs 1–${FSM.nOut} = y.`;
+  const io = `${FSM.nIn ? `switches 1–${FSM.nIn} = x` : 'no inputs'}, LEDs 1–${FSM.nOut} = y`;
+  const msg = `Circuit created: ${k} D flip-flop${k === 1 ? '' : 's'} and ${gates} gate${gates === 1 ? '' : 's'} (state codes ${ch.how}). Pulse 1 = CLK, pulse 2 = RESET (to the initial state), ${io}.`;
   fsmMsg(msg); toast(msg + ($('#fsmBuild').checked ? '' : ' Press Build on bench in the logic view to wire it.'));
   if ($('#fsmBuild').checked) setTimeout(() => dzBuild(), 30);
+}
+// ---- reading a circuit back: a design (or the bench, through the design drawn from it) with D flip-flops becomes a
+// state machine; the states are named after their flip-flop codes and only those reachable from RESET (0…0) are kept
+function fsmFromAnalysis(a, src) {
+  if (a.err) return fsmMsg(a.err, true);
+  if (!a.k) return fsmMsg(`The ${src} has no flip-flops, so it has no states: it is combinational. Its truth table is on the Truth table tab.`, true);
+  if (a.nIn > 3) return fsmMsg(`The ${src} has ${a.nIn} inputs besides the clock and reset; the state machine handles up to 3.`, true);
+  const nX = 1 << a.nIn, k = a.k, m = Math.min(4, a.outs.length);
+  const row = (q, x) => a.tbl.out[(q << a.nIn) | x];
+  const nextOf = (q, x) => { const r = row(q, x).slice(0, k); return r.includes(2) ? null : r.reduce((acc, b) => acc * 2 + b, 0); };
+  const start = a.resetCode == null ? 0 : a.resetCode, order = [start], seen = new Set(order);
+  for (let i = 0; i < order.length; i++) for (let x = 0; x < nX; x++) { const nq = nextOf(order[i], x); if (nq != null && !seen.has(nq)) { seen.add(nq); order.push(nq); } }
+  const yStr = arr => arr.map(b => b === 2 ? '-' : b).join('');
+  const ys = (q, x) => yStr(row(q, x).slice(k, k + m));
+  const moore = order.every(q => Array.from({ length: nX }, (_, x) => ys(q, x)).every((y, _, all) => y === all[0]));
+  const N = order.length, R = Math.max(110, N * 36);
+  FSM.type = moore ? 'moore' : 'mealy'; FSM.nIn = a.nIn; FSM.nOut = Math.max(1, m);
+  FSM.states = order.map((q, i) => ({
+    id: i + 1, name: 'q' + q.toString(2).padStart(k, '0'),
+    x: N === 1 ? 0 : Math.round(R * Math.sin(2 * Math.PI * i / N)), y: N === 1 ? 0 : Math.round(-R * Math.cos(2 * Math.PI * i / N)),
+    out: m ? (moore ? ys(q, 0) : '') : '-',
+    next: Array.from({ length: nX }, (_, x) => { const nq = nextOf(q, x); return nq == null ? null : order.indexOf(nq) + 1; }),
+    mo: Array.from({ length: nX }, (_, x) => m ? ys(q, x) : '-'),
+  }));
+  FSM.seq = N + 1; FSM.sel = null; FSM.autoFit = true; FSM.encCache = null; FSM.live = null;
+  fsmNormalise(); fsmBarSync(); fsmChanged();
+  fsmMsg(`Read from the ${src}: ${N} reachable state${N === 1 ? '' : 's'} of ${1 << k}, named q + the codes of ${a.ffNames.join(', ')}. `
+    + `${moore ? 'Moore' : 'Mealy'} outputs: ${a.outNames.slice(0, m).join(', ') || 'none'}; inputs: ${a.inNames.join(', ') || 'none'}.`
+    + (a.outs.length > 4 ? ' Only the first 4 outputs are shown.' : '')
+    + (a.resetCode == null ? ' Not every flip-flop has its CLR wired, so the start state 0…0 is assumed.' : ''));
 }
 // ---- after building: the state the bench is in, read from the flip-flops' Q pins, is highlighted
 setInterval(() => {
@@ -5501,7 +5696,11 @@ $('#fsmAdd').onclick = () => {
 $('#fsmEx').onclick = fsmExample;
 $('#fsmClear').onclick = () => { if (!FSM.states.length) return; FSM.states = []; FSM.sel = null; FSM.autoFit = true; fsmChanged(); fsmMsg('Cleared.'); };
 $('#fsmFit').onclick = () => { FSM.autoFit = true; fsmFit(); };
-$('#fsmMake').onclick = fsmMake;
+$('#fsmMake').onclick = () => setTimeout(fsmMake, 20);   // lets "Choosing the state codes…" show first
+$('#fsmEnc').onchange = () => { FSM.encCache = null; fsmInfo(); };
+$('#fsmStyle').onchange = () => { FSM.encCache = null; };
+$('#fsmFromDesign').onclick = () => { if (!D.nodes.length) return fsmMsg('The design is empty.', true); fsmFromAnalysis(circuitAnalyse(D.nodes, D.wires), 'design'); };
+$('#fsmFromBench').onclick = () => { const a = benchAnalyse(); if (a.odd) return fsmMsg(`The bench has ${a.odd.join(', ')}, which can't be read as gates and D flip-flops.`, true); fsmFromAnalysis(a, 'bench'); };
 function ttTab(tab) {
   FSM.tab = tab;
   $('#ttPane').hidden = tab !== 'tt'; $('#fsmPane').hidden = tab !== 'fsm';
