@@ -477,7 +477,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
       <li>The truth table lives on its sheet in the lid; <b>Open on the screen</b> (or <b>Truth table</b> on the top bar, or <kbd>T</kbd>) moves it into the same panel as the logic view, with a tab for each. It measures a hand-wired bench by itself whenever the wiring changes, except for circuits with memory, where stepping the switches would change what a latch or counter holds. <b>Design</b> and <b>Bench</b> fill it on demand: from your design (ideal gates), or by measuring the bench: it steps through every combination of the wired switches and pulses, reads the LEDs, then puts the switches back. Circuits with memory are evaluated top to bottom, so each row follows on from the one above.</li>
       <li>Click an output cell to cycle it through 0, 1 and X (don't care). The minimised expression for each output updates as you edit (Quine–McCluskey).</li>
       <li><b>Create design</b> turns the table into gates and opens it in the designer. Tick <b>and build it on the bench</b> to go straight from a truth table to modules and cables.</li>
-      <li>The <b>Smart</b> style designs the way a person at the bench does. It spots XOR patterns (parity, Gray code) and chains them, reuses outputs and signals it has already built (one output can be a single gate fed by two earlier ones), and tries short tricks of up to three gates. Otherwise it falls back to minimised NAND–NAND or NOR–NOR. It designs for the chips in your case: without a 7408 or 7432, an AND or OR counts as the two gates it really costs. The four classic styles give the plain textbook forms.</li>
+      <li>The <b>Smart</b> style designs the way a person at the bench does. It spots XOR patterns (parity, Gray code) and chains them, reuses outputs and signals it has already built (one output can be a single gate fed by two earlier ones), and tries short tricks of up to three gates. Otherwise it falls back to minimised NAND–NAND or NOR–NOR. It designs for the chips in your case: the lab has no AND or OR chips, so an AND or OR counts as the two gates it really costs. The four classic styles give the plain textbook forms.</li>
     </ul>
     <h3>Optimize</h3>
     <ul>
@@ -610,6 +610,7 @@ body.lv-ui{--rp:calc(min(52vw,1000px) + 12px)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/webxr/VRButton.js"></script>
 <script>
 (() => {
 'use strict';
@@ -625,8 +626,6 @@ function gateFn(type, ins) {
   const any = r => { for (let k = 0; k < n; k++) if (r(ins[k])) return 1; return 0; };
   switch (type) {
     case 'nand': return r => (out[0] = 1 - all(r), out);
-    case 'and':  return r => (out[0] = all(r), out);
-    case 'or':   return r => (out[0] = any(r), out);
     case 'nor':  return r => (out[0] = 1 - any(r), out);
     case 'xor':  return r => (out[0] = r(ins[0]) ^ r(ins[1]), out);
     case 'not':  return r => (out[0] = 1 - r(ins[0]), out);
@@ -682,11 +681,8 @@ const CHIPS = {
   '7400': gateChip('Quad 2-input NAND', 'nand', QUAD),
   '7402': gateChip('Quad 2-input NOR', 'nor', QUADNOR),
   '7404': gateChip('Hex inverter', 'not', HEX),
-  '7408': gateChip('Quad 2-input AND', 'and', QUAD),
   '7410': gateChip('Triple 3-input NAND', 'nand', [G(12,1,2,13), G(6,3,4,5), G(8,9,10,11)]),
   '7420': gateChip('Dual 4-input NAND', 'nand', [G(6,1,2,4,5), G(8,9,10,12,13)]),
-  '7430': gateChip('8-input NAND', 'nand', [G(8,1,2,3,4,5,6,11,12)]),
-  '7432': gateChip('Quad 2-input OR', 'or', QUAD),
   '7451': { desc: 'Dual AND-OR-INVERT', type: 'aoi', group: 'Gates', pins: 14, vcc: 14, gnd: 7,
     gates: [G(8,1,13,9,10), G(6,2,3,4,5)],
     names: {1:'1A',13:'1B',9:'1C',10:'1D',8:'1Y',2:'2A',3:'2B',4:'2C',5:'2D',6:'2Y'},
@@ -712,37 +708,6 @@ const CHIPS = {
     build: () => [{ outs: [9,6,2,15,14], fn: r => {
       const a = r(10) | r(8) << 1 | r(3) << 2 | r(1) << 3, b = r(11) | r(7) << 1 | r(4) << 2 | r(16) << 3;
       const s = a + b + r(13); return [s & 1, s >> 1 & 1, s >> 2 & 1, s >> 3 & 1, s >> 4 & 1]; } }] },
-  '7485': { desc: '4-bit magnitude comparator', group: 'Arithmetic', pins: 16, vcc: 16, gnd: 8, title: '4-BIT\nCOMPARATOR',
-    names: {1:'B3',2:'A<B in',3:'A=B in',4:'A>B in',5:'A>B',6:'A=B',7:'A<B',9:'B0',10:'A0',11:'B1',12:'A1',13:'A2',14:'B2',15:'A3'},
-    build: () => [{ outs: [5,6,7], fn: r => {
-      const A = r(10) | r(12) << 1 | r(13) << 2 | r(15) << 3, B = r(9) | r(11) << 1 | r(14) << 2 | r(1) << 3;
-      if (A > B) return [1,0,0]; if (A < B) return [0,0,1];
-      if (r(3)) return [0,1,0];
-      return [1 - r(2), 0, 1 - r(4)]; } }] },
-
-  '7490': { desc: 'Decade counter (÷2 and ÷5)', group: 'Counters & registers', pins: 14, vcc: 5, gnd: 10, title: 'DECADE\nCOUNTER',
-    names: {1:'CKB',2:'R0(1)',3:'R0(2)',4:'NC',6:'R9(1)',7:'R9(2)',8:'QC',9:'QB',11:'QD',12:'QA',13:'NC',14:'CKA'},
-    build: () => [{ outs: [12,9,8,11], st: { a: 0, b: 0, pa: 1, pb: 1 }, rand: st => { st.a = rnd(); st.b = Math.random() * 5 | 0; },
-      fn(r, st) {
-        const ca = r(14), cb = r(1);
-        if (r(6) && r(7)) { st.a = 1; st.b = 4; st.rst = 1; }
-        else if (r(2) && r(3)) { st.a = 0; st.b = 0; st.rst = 1; }
-        else if (st.rst) st.rst = 0;   // edges caused by the reset itself (QA→CKB) arrive while it is still held: ignore them
-        else { if (st.pa && !ca) st.a ^= 1; if (st.pb && !cb) st.b = (st.b + 1) % 5; }
-        st.pa = ca; st.pb = cb;
-        return [st.a, st.b & 1, st.b >> 1 & 1, st.b >> 2 & 1];
-      } }] },
-  '7493': { desc: '4-bit binary counter (÷2 and ÷8)', group: 'Counters & registers', pins: 14, vcc: 5, gnd: 10, title: '4-BIT\nBINARY\nCOUNTER',
-    names: {1:'CKB',2:'R0(1)',3:'R0(2)',8:'QC',9:'QB',11:'QD',12:'QA',14:'CKA'},
-    build: () => [{ outs: [12,9,8,11], st: { a: 0, b: 0, pa: 1, pb: 1 }, rand: st => { st.a = rnd(); st.b = Math.random() * 8 | 0; },
-      fn(r, st) {
-        const ca = r(14), cb = r(1);
-        if (r(2) && r(3)) { st.a = 0; st.b = 0; st.rst = 1; }
-        else if (st.rst) st.rst = 0;   // see 7490: a clock edge made by the reset is not counted
-        else { if (st.pa && !ca) st.a ^= 1; if (st.pb && !cb) st.b = (st.b + 1) & 7; }
-        st.pa = ca; st.pb = cb;
-        return [st.a, st.b & 1, st.b >> 1 & 1, st.b >> 2 & 1];
-      } }] },
   '7495': { desc: '4-bit shift register, parallel load', group: 'Counters & registers', pins: 14, vcc: 14, gnd: 7, title: '4-BIT\nSHIFT\nREGISTER',
     names: {1:'SER',2:'A',3:'B',4:'C',5:'D',6:'MC',8:'LS/CK2',9:'RS/CK1',10:'QD',11:'QC',12:'QB',13:'QA'},
     build: () => [{ outs: [13,12,11,10], st: { q: [0,0,0,0], p1: 1, p2: 1, ser: 0, par: [0,0,0,0] },
@@ -757,20 +722,6 @@ const CHIPS = {
         return st.q;
       } }] },
 
-  '74151': { desc: '8-to-1 multiplexer', group: 'Selectors & decoders', pins: 16, vcc: 16, gnd: 8, title: '8 → 1\nMUX',
-    names: {1:'D3',2:'D2',3:'D1',4:'D0',5:'Y',6:'~W',7:'~G',9:'C',10:'B',11:'A',12:'D7',13:'D6',14:'D5',15:'D4'},
-    build: () => [{ outs: [5,6], fn: r => {
-      if (r(7)) return [0, 1];
-      const y = r([4,3,2,1,15,14,13,12][r(11) | r(10) << 1 | r(9) << 2]); return [y, 1 - y]; } }] },
-  '74153': { desc: 'Dual 4-to-1 multiplexer', group: 'Selectors & decoders', pins: 16, vcc: 16, gnd: 8, title: 'DUAL\n4 → 1\nMUX',
-    names: {1:'1~G',2:'B',3:'1C3',4:'1C2',5:'1C1',6:'1C0',7:'1Y',9:'2Y',10:'2C0',11:'2C1',12:'2C2',13:'2C3',14:'A',15:'2~G'},
-    build: () => [[1,[6,5,4,3],7],[15,[10,11,12,13],9]].map(([g, d, o]) => ({ outs: [o],
-      fn: r => [r(g) ? 0 : r(d[r(14) | r(2) << 1])] })) },
-  '74138': { desc: '3-to-8 decoder, active-low outputs', group: 'Selectors & decoders', pins: 16, vcc: 16, gnd: 8, title: '3 → 8\nDECODER',
-    names: {1:'A',2:'B',3:'C',4:'~G2A',5:'~G2B',6:'G1',7:'~Y7',9:'~Y6',10:'~Y5',11:'~Y4',12:'~Y3',13:'~Y2',14:'~Y1',15:'~Y0'},
-    build: () => [{ outs: [15,14,13,12,11,10,9,7], fn: r => {
-      const en = r(6) && !r(4) && !r(5), s = r(1) | r(2) << 1 | r(3) << 2;
-      return [0,1,2,3,4,5,6,7].map(i => en && i === s ? 0 : 1); } }] },
   '7442': { desc: 'BCD to decimal decoder', group: 'Selectors & decoders', pins: 16, vcc: 16, gnd: 8, title: 'BCD → DEC\nDECODER',
     names: {1:'~0',2:'~1',3:'~2',4:'~3',5:'~4',6:'~5',7:'~6',9:'~7',10:'~8',11:'~9',12:'D',13:'C',14:'B',15:'A'},
     build: () => [{ outs: [1,2,3,4,5,6,7,9,10,11], fn: r => {
@@ -791,11 +742,9 @@ const CHIPS = {
     build: () => [] },
 };
 const GROUPS = ['Gates', 'Flip-flops', 'Arithmetic', 'Counters & registers', 'Selectors & decoders', 'Wiring'];
-const GRAY_BOARDS = new Set(['7404','7410','7430','7432','7485','74138','7442','74153','74155']);
-// The modules that really exist in the lab, checked against the photos of the case and of the module box.
-// The other chips stay defined so benches saved with them still load, but the rack no longer offers them.
+const GRAY_BOARDS = new Set(['7404','7410','7442','74155']);
+// CHIPS holds only the modules that really exist in the lab, checked against the photos of the case and of the module box.
 // The splitter is the plain cream board with 7 lines of 6 pins, seen between the 7410 and the 7402 in the photos of the case.
-const LAB_SET = ['7400', '7402', '7404', '7410', '7420', '7442', '7450', '7451', '7474', '7476', '7483', '7486', '7495', '74155', 'SPLIT'];
 // Board versions seen in the photos. Cream boards number the pins like the chip (notch up, pin 1 top left).
 // The mirrored gray boards print them mirrored top to bottom: pin 7 (0V) top left, pin 1 bottom left, pin 14 (+5V) bottom right, notch at the bottom.
 const BOARD_VARIANTS = { '7400': ['cream'], '7402': ['cream'], '7404': ['mirrored', 'cream'], '7410': ['mirrored'], '7420': ['cream', 'mirrored'],
@@ -822,7 +771,6 @@ CHIPS['7476'].ffs = [{ ins: [[4, 'J'], [1, 'C'], [16, 'K'], [2, '~S'], [3, '~R']
                      { ins: [[9, 'J'], [6, 'C'], [12, 'K'], [7, '~S'], [8, '~R']], outs: [[11, 'Q'], [10, '~Q']] }];
 for (const [k, d] of Object.entries(CHIPS)) {
   d.name = k;
-  d.legacy = !LAB_SET.includes(k);
   if (!d.passive) { d.names[d.vcc] = 'VCC'; d.names[d.gnd] = 'GND'; }
   for (let p = 1; p <= d.pins; p++) if (!d.names[p]) d.names[p] = 'NC';
   d.outSet = new Set(d.build().flatMap(u => u.outs));
@@ -868,6 +816,7 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;   // the case is static; shadows are re-baked only when something moves
+renderer.xr.enabled = true;              // VR headsets (see VR below)
 // Render on demand: a frame is drawn only when the camera, a light or an object actually changed.
 let dirty = true, shadowDirty = true;
 const invalidate = shadow => { dirty = true; if (shadow) shadowDirty = true; };
@@ -2055,14 +2004,13 @@ function serialize() {
     sw: S.sw.slice(), range: S.range, cal: S.cal, mains: S.mains, autoPower: S.autoPower };
 }
 function clearAll() { for (const w of wires.slice()) removeWire(w); for (const m of modules.slice()) destroyModule(m); }
-// returns what the caller may want to tell the user: chips outside the lab set, unknown chips, a newer file version
+// returns what the caller may want to tell the user: chips that are not in the lab, a newer file version
 function deserialize(d) {
   clearAll();
-  const info = { legacy: [], unknown: [], newer: (d.v || 1) > FILE_VERSION };
+  const info = { unknown: [], newer: (d.v || 1) > FILE_VERSION };
   for (const m of d.modules || []) {
     if (!CHIPS[m.type]) { info.unknown.push(m.type); continue; }
     if (!(m.slot >= 0 && m.slot < 12) || moduleAt(m.slot)) continue;
-    if (CHIPS[m.type].legacy) info.legacy.push(m.type);
     createModule(m.type, m.slot, m.rot ? 1 : 0, m.variant);   // v1 has no variant: createModule picks the default board
   }
   let ci = 0;
@@ -2193,7 +2141,7 @@ const pinHTML = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/~(.
 // that module; a click drops it into the first free slot. The rack never runs out.
 const RACK = { step: 4.1, rise: 0.13, cols: [-50.6, -40.3] };
 function buildRack() {
-  const types = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp && !CHIPS[k].legacy));
+  const types = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp));
   const per = Math.ceil(types.length / 2);
   box(24, 0.14, per * RACK.step + BOARD_D + 3, new THREE.MeshStandardMaterial({ color: 0x1d2a24, roughness: 0.95 }), (RACK.cols[0] + RACK.cols[1]) / 2, -6.53, 3);   // felt mat
   types.forEach((type, i) => {
@@ -2314,7 +2262,7 @@ function headerTip(h) {
    INPUT HANDLING
    ================================================================ */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-function setNDC(e) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera); }
+function setNDC(e) { if (VR.on) return; const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pick() { const hits = ray.intersectObjects(CASE.open ? pickables : CASE.latchMeshes, false); return hits.length ? hits[0] : null; }
 function planePoint(y) { const p = new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), p) ? p : null; }
 
@@ -2748,8 +2696,7 @@ function loadText(txt) {
     const d = JSON.parse(txt); if (!d || !Array.isArray(d.modules)) throw 0;
     guideStop(); pushUndo(); const info = deserialize(d); save(); dzNewBench();
     const uniq = a => [...new Set(a)].join(', ');
-    if (info.legacy.length) setTimeout(() => toast(`This bench uses ${uniq(info.legacy)}, which ${info.legacy.length > 1 ? 'are' : 'is'} not in the lab set (not in the photos of the case or the module box). It still works here, but you won't find it in the lab.`, true), 400);
-    if (info.unknown.length) setTimeout(() => toast(`Skipped chips this version doesn't know: ${uniq(info.unknown)}.`, true), 800);
+    if (info.unknown.length) setTimeout(() => toast(`Skipped chips that are not in the lab: ${uniq(info.unknown)}.`, true), 800);
     if (info.powered) setTimeout(() => toast(`Older file: modules now need power cables, so ${info.powered} module${info.powered === 1 ? ' was' : 's were'} wired to +5V and 0V.`), 200);
     if (info.newer) setTimeout(() => toast(`This file was saved by a newer version of the simulator (format ${d.v}). Most of it loaded, but some details may be missing.`, true), 1200);
     if (d.design) {
@@ -3683,7 +3630,6 @@ const TPL = {
     const k = i.length, alts = [], pad = n => i.concat(Array(n - k).fill(i[k - 1]));   // spare inputs tied to a used one
     if (k < 3) alts.push([N_('nand', pad(3), o)]);
     if (k < 4) alts.push([N_('nand', pad(4), o)]);
-    if (k < 8) alts.push([N_('nand', i.concat(Array(8 - k).fill(null)), o)]);       // 7430: leftover inputs open (HIGH)
     if (k === 2) { const t = F(), na = F(), nb = F(); alts.push([N_('and', i, t), N_('not', [t], o)]); alts.push([N_('not', [i[0]], na), N_('not', [i[1]], nb), N_('or', [na, nb], o)]); }
     else { const h = Math.ceil(k / 2), t1 = F(), t2 = F(); alts.push([N_('and', i.slice(0, h), t1), N_('and', i.slice(h), t2), N_('nand', [t1, t2], o)]); }
     return alts;
@@ -3697,8 +3643,8 @@ const TPL = {
   xnor: (i, o, F) => { const t = F(); return [[N_('xor', i, t), N_('not', [t], o)]]; },
 };
 const chipOfTK = (t, k) => t === 'not' ? (k === 1 ? '7404' : null)
-  : t === 'nand' ? (k === 2 ? '7400' : k === 3 ? '7410' : k === 4 ? '7420' : k <= 8 ? '7430' : null)
-  : k === 2 ? ({ and: '7408', or: '7432', nor: '7402', xor: '7486' })[t] || null : null;
+  : t === 'nand' ? (k === 2 ? '7400' : k === 3 ? '7410' : k === 4 ? '7420' : null)
+  : k === 2 ? ({ nor: '7402', xor: '7486' })[t] || null : null;   // the lab has no AND or OR chips
 const chipOfP = p => chipOfTK(p.t, p.ins.length);
 const isInv = p => p.t === 'not' || ((p.t === 'nand' || p.t === 'nor') && p.ins[0] != null && p.ins.every(s => s === p.ins[0]));
 function planFor(t, k, depth, ctx) {
@@ -3814,15 +3760,15 @@ function dzBuild(skipOpt, noSplit) {
   const prefer = $('#dzPrefer').checked;
   const inCase = new Map(); for (const m of modules) inCase.set(m.type, (inCase.get(m.type) || 0) + 1);
   const keepSigs = new Set(sinks.map(k => k.sig));
-  const STRATS = [{}, { '7404': 0.3, '7402': 2, '7432': 2 }, { '7404': 0.3, '7400': 2, '7408': 2 }];
+  const STRATS = [{}, { '7404': 0.3, '7402': 2 }, { '7404': 0.3, '7400': 2 }];
   let best = null;
   const tried = new Set();
   for (let si = 0; si < STRATS.length; si++) {
     const w = STRATS[si];
     if (tried.has(JSON.stringify(w))) continue; tried.add(JSON.stringify(w));
     let n2 = tn; const F = () => 't' + (n2++);
-    // "any" chip means any chip that exists in the lab; chips outside the lab set are only used if they are already in the case
-    const ctxCase = { avail: c => inCase.has(c), memo: new Map(), w }, ctxAny = { avail: c => !CHIPS[c].legacy || inCase.has(c), memo: new Map(), w };
+    // "any" chip means any chip that exists in the lab
+    const ctxCase = { avail: c => inCase.has(c), memo: new Map(), w }, ctxAny = { avail: c => !!CHIPS[c], memo: new Map(), w };
     let list = [];
     for (const p0 of prims) {
       const p = { ...p0, ins: p0.ins.slice() };
@@ -4631,10 +4577,11 @@ function ttSynthSmart() {
   const INV = { nand: 1, nor: 1, xnor: 1, not: 1 };
   // A gate costs 1, plus a hair for the less "textbook" ones, so equal-size solutions come out the way a person writes them.
   // Like a person at the lab bench, it designs for the chips actually in the case: a gate type with no chip in the case
-  // costs what its replacement costs (no 7408 → AND = NAND + NOT, no 7432 → OR = NOR + NOT, …).
-  const inCase = new Set(modules.map(m => m.type)), has = c => inCase.has(c) || (!modules.length && !CHIPS[c].legacy);
-  const hasNand = has('7400') || has('7410') || has('7420') || has('7430');
-  const W = { nand: hasNand ? 1 : 2, not: 1, and: has('7408') ? 1 : 2, or: has('7432') ? 1 : 2.1, nor: has('7402') ? 1.02 : 2.1,
+  // costs what its replacement costs (no 7486 → XOR from NANDs, …). The lab has no AND or OR chips at all,
+  // so AND = NAND + NOT and OR = NOR + NOT always count as two gates.
+  const inCase = new Set(modules.map(m => m.type)), has = c => inCase.has(c) || !modules.length;
+  const hasNand = has('7400') || has('7410') || has('7420');
+  const W = { nand: hasNand ? 1 : 2, not: 1, and: 2, or: 2.1, nor: has('7402') ? 1.02 : 2.1,
     xor: has('7486') ? 1.05 : 4, xnor: has('7486') ? 1.15 : 5 };
   const gate = (op, args, extra) => {
     let v = op === 'not' ? args[0].vec : args.slice(1).reduce((acc, a) => RED[op](acc, a.vec), args[0].vec);
@@ -5359,7 +5306,7 @@ $('#hpTabGuide').onclick = () => hpTab('guide');
 $('#hpTabDs').onclick = () => hpTab('ds');
 // Datasheets: one page per lab module, with its pinout drawn like the chip, and the selected module's own controls
 const DS = { type: '7400' };
-const DS_TYPES = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp && !CHIPS[k].legacy));
+const DS_TYPES = GROUPS.flatMap(grp => Object.keys(CHIPS).filter(k => CHIPS[k].group === grp));
 $('#dsIndex').innerHTML = DS_TYPES.map(k => `<button data-ds="${k}">${k === 'SPLIT' ? 'Splitter' : k}</button>`).join('');
 $('#dsIndex').onclick = e => { const b = e.target.closest('[data-ds]'); if (b) dsShow(b.dataset.ds); };
 function dsShow(type) {
@@ -5665,13 +5612,66 @@ function kbShortcut(e) {
 }
 
 /* ================================================================
+   VR (WebXR): first prototype. The scene is in centimetres, so the headset and controllers sit in a rig scaled
+   ×100 and placed so you stand in front of the bench. A controller ray stands in for the mouse and the trigger
+   for its left button, so a trigger press on a pin, then on another pin, runs a cable. The HTML papers and
+   panels don't show inside the headset yet.
+   ================================================================ */
+const VR = { on: false, rig: new THREE.Group(), ctrls: [], near: camera.near, parent: null };
+VR.rig.scale.setScalar(100);
+VR.rig.position.set(-4, -85, 70);   // the floor 85 cm below the table top, standing 70 cm back from the case's centre
+scene.add(VR.rig);
+const vrMat = new THREE.Matrix4();
+function vrRay(c) {
+  c.updateMatrixWorld(true);
+  vrMat.identity().extractRotation(c.matrixWorld);
+  ray.ray.origin.setFromMatrixPosition(c.matrixWorld);
+  ray.ray.direction.set(0, 0, -1).applyMatrix4(vrMat).normalize();
+}
+function vrPointer(type) {
+  canvas.dispatchEvent(new PointerEvent(type, { button: 0, buttons: type === 'pointerdown' ? 1 : 0, pointerId: 77, pointerType: 'mouse', clientX: 0, clientY: 0, bubbles: true }));
+}
+(function vrSetup() {
+  if (!THREE.VRButton || !navigator.xr) return;
+  const btn = THREE.VRButton.createButton(renderer);
+  btn.style.zIndex = 50;
+  document.body.appendChild(btn);
+  for (let i = 0; i < 2; i++) {
+    const c = renderer.xr.getController(i);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0x66ccff }));
+    line.scale.z = 2;   // 2 m
+    c.add(line);
+    c.addEventListener('selectstart', () => { VR.hand = c; vrRay(c); vrPointer('pointerdown'); });
+    c.addEventListener('selectend', () => { VR.hand = c; vrRay(c); vrPointer('pointerup'); });
+    VR.rig.add(c); VR.ctrls.push(c);
+  }
+  renderer.xr.addEventListener('sessionstart', () => {
+    VR.on = true; VR.hand = VR.ctrls[0];
+    VR.parent = camera.parent; VR.near = camera.near;
+    VR.rig.add(camera); camera.near = 0.02; camera.updateProjectionMatrix();   // near is in metres inside the headset
+    controls.enabled = false; hideTip(); invalidate(true);
+  });
+  renderer.xr.addEventListener('sessionend', () => {
+    VR.on = false;
+    VR.rig.remove(camera); if (VR.parent) VR.parent.add(camera);
+    camera.near = VR.near; controls.enabled = true;
+    resize(); goView('bench', true); invalidate(true);
+  });
+})();
+// each frame in the headset: aim with the controller that last pulled its trigger, and hover what it points at
+function vrTick() {
+  if (!VR.on || !VR.hand) return;
+  vrRay(VR.hand);
+  if (ptr.mode === 'module') moveDrag(); else hover(null);
+}
+
+/* ================================================================
    FRAME LOOP
    ================================================================ */
 let lastT = performance.now(), statusStr = '', conflictKey = '', scopeTick = 0;
 function frame(now) {
-  requestAnimationFrame(frame);
   const dt = Math.max(0, (now - lastT) / 1000); lastT = now;
-  flushMove();
+  if (VR.on) { pendingMove = null; guard('vr', vrTick); } else flushMove();
   const span = step(dt);
   if (queue.length) settle(64);   // an unstable loop (e.g. a ring oscillator) keeps running across frames
   if (span > 0) for (let k = 0; k < 16; k++) setLed(P.leds[k], powerOn ? Math.min(1, ledAcc[k] / span) : 0);
@@ -5709,8 +5709,8 @@ function frame(now) {
     if (camAnim.t >= 1) { camAnim = null; controls.enabled = true; }
     dirty = true;
   }
-  if (controls.update()) dirty = true;
-  if (dirty) {
+  if (!VR.on && controls.update()) dirty = true;
+  if (dirty || VR.on) {   // a headset needs a fresh frame every time, the head never stops moving
     guard('placing the papers', updatePapers);
     guard('keyboard focus', () => { if (KB.focus && KB.ring.visible) kbPlace(); });
     if (shadowDirty && renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
@@ -5955,7 +5955,8 @@ function boot(data) {
   applyQuality(q);
   guideResume();
   goView('bench', true);
-  requestAnimationFrame(t => { lastT = t; frame(t); });
+  lastT = performance.now();
+  renderer.setAnimationLoop(frame);   // the browser's frame loop on screen, the headset's inside VR
 }
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => serialize()); } catch (_) {}
 if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
